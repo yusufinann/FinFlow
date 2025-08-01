@@ -1,0 +1,66 @@
+#Müşteri bilgileri güncelleme (confirm modal ile)
+#Müşteri Silme (confirm modal ile)
+#Müşteriyi pasif hale getirme (Soft-Delete, veriyi silmek yerine isActive flag’ini değiştirme).
+#Müşteri hesapları crud
+#Rol Bazlı Yetkilendirme (RBAC): Admin ve Standart Personel gibi farklı yetki seviyeleri tanımlama.
+#Admin ,Personel,müşteri ayrışcak.
+# ** Müşteriler bannkacılık uygulaması kullanıcısı olacağından birbirlerine para transferi yapabilecek. **
+  4. Finansal İşlemler ve Transferler
+Para Transferi (Havale/EFT): Hesaplar arası güvenli para transferi.
+İşlem Doğrulama: Transfer öncesi hedef hesap var mı, gönderen bakiyesi yeterli mi gibi anlık kontroller.
+Atomik İşlemler (Transactions): Para transferi sırasında bir hata olursa (örn: alıcıya para eklenemezse), işlemi tamamen geri alarak veri tutarlılığını sağlama.
+Detaylı İşlem Kaydı: Her para hareketini (tutar, tarih, açıklama, gönderen, alıcı) ayrı bir transactions tablosuna kaydetme.
+Hesaba para yatırma ve çekme simülasyonu.
+
+-------------------------------------------------------------
+*Banka personeii tüm müşterileri listeleyebilsin.
+*Banka personei müşteriye maaş ödemesi yapabilsin (işlem türü => maaş ödemesi)
+*müşteriye kredi kartı hesabı açabilsin ve limit versin.
+
+Para transferi işlemleri için (Banka kartı ile ödeme olacak. ):
+**müşteri eft/havale yapabilsin (burada bireysel ödeme ,
+Market alışverişi,
+ev-elektronik,
+giyim,
+yeme/içme
+internet mağazası,
+Fatura ödemesi (elektrik, su, doğalgaz, internet, telefon)
+Vergi ödemesi (gelir vergisi, motorlu taşıtlar vergisi, emlak vergisi)
+Diğer ödemeler 
+ açıklama alanı olacak.
+).
+ Bireysel ödemede para kime göndereceği ve decription alanları(opsiyonel) olcak.
+
+#ödemeler kredi kartı ile ise ,işlem türleri şöyle olcak
+**Kredi kartı ile ödeme olacak.ödeme kredi kartı ile ise ,işlem türleri şöyle olcak ;
+Market alışverişi,
+ev-elektronik,
+giyim,
+yeme/içme
+internet mağazası,
+Fatura ödemesi (elektrik, su, doğalgaz, internet, telefon)
+Vergi ödemesi (gelir vergisi, motorlu taşıtlar vergisi, emlak vergisi)
+Diğer ödemeler 
+  açıklama alanı olacak.
+
+işlem türüne ek olarak da yine description alanı olacak (opsiyonel).
+
+Recent transactions alanında gelir ve giderler işlem türüne göre ayrılacak;
+###
+Recent Transaction (Son İşlemler)
+Bu bölüm, hesabınızdan yapılan en son, tekil işlemleri kronolojik (tarihe göre sıralı) bir liste olarak gösterir. Amacı, en son nereye para harcadığınızı veya kime para gönderdiğinizi hızlıca görmenizi sağlamaktır.
+İçerik: Her bir işlem ayrı ayrı listelenir.
+To Lindsley Sudiro (Transfer)
+Kopi Kenangan (Kafe & Restoran)
+Pecel Madiun Cak Ilham (Kafe & Restoran)
+Amaç: "Paranızla en son ne yaptınız?" sorusuna cevap verir. Bir nevi hesap dökümünüzün en güncel halidir.
+Veri: Her bir işlemin tam tutarını gösterir (- $120,00, - $3,12, vb.).
+Total Spend (Toplam Harcama)
+Bu bölüm, belirli bir dönemdeki (genellikle o aydaki) harcamalarınızın kategorilere ayrılmış özetini gösterir. Tek tek işlemleri değil, aynı kategorideki tüm işlemlerin toplamını sunar.
+İçerik: Harcama kategorileri ve bu kategorilerdeki toplam tutarlar listelenir.
+Transfers (Transferler)
+Shopping (Alışveriş)
+Cafe & Restaurant (Kafe & Restoran)
+Amaç: "Paranız nereye gidiyor?" sorusuna cevap verir. Bütçenizi ve harcama alışkanlıklarınızı analiz etmenize yardımcı olur.
+Veri: Her bir kategoride harcanan toplam tutarı gösterir. Örneğin, Recent Transaction listesindeki $3,12 ve $5,00 tutarındaki kafe harcamaları, "Total Spend" bölümündeki Cafe & Restaurant kategorisindeki $20,12 lik toplamın bir parçasıdır. Bu, o ay içinde bu kategoride başka harcamaların da yapıldığını gösterir.
+###
