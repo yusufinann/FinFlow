@@ -2,9 +2,14 @@ import React from 'react'
 import {Box} from "@mui/material";
 import Navbar from '../components/Navbar';
 import { Outlet } from 'react-router-dom';
+import personnelBackground from '../assets/bg-grey.jpg'; 
+
 const MainAppLayout = () => {
   return (
-  <Box sx={{display:"flex",flexDirection:"column",height:"100vh"}}>
+  <Box sx={{display:"flex",flexDirection:"column",height:"100vh",     backgroundImage: `url(${personnelBackground})`,
+          backgroundSize: 'cover', 
+          backgroundPosition: 'center', 
+          backgroundRepeat: 'no-repeat', }}>
     <Navbar/>
     <Box
         component="main"

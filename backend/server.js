@@ -13,8 +13,9 @@ import customerAccountRoutes from './routes/customerRoutes/account.routes.js';
 import transactionRoutes from './routes/transaction.routes.js';
 import customerNotificationRoutes from './routes/customerRoutes/notification.routes.js';
 import customerTransactionRoutes from './routes/customerRoutes/transaction.routes.js';
+import adminRoutes from './routes/adminRoutes/personnel.routes.js';
 import wss from './websocket/websocketServer.js';
-
+import bcrypt from 'bcrypt';
 dotenv.config();
 
 const app = express();
@@ -25,6 +26,8 @@ const corsOptions = {
   optionsSuccessStatus: 200
 };
 
+const SALT_ROUNDS = 10;
+const password = '123456';
 app.use(cors(corsOptions));
 app.use(express.json());
 
@@ -37,6 +40,7 @@ app.use('/api/customers/transactions', customerTransactionRoutes);
 
 app.use('/api/customers', customerRoutes); 
 app.use('/api/transactions', transactionRoutes);
+app.use('/api/admin/personnel', adminRoutes);
 
 const server = http.createServer(app);
 
@@ -69,7 +73,6 @@ server.on('upgrade', (request, socket, head) => {
     socket.destroy();
   }
 });
-
 server.listen(PORT, () => {
   console.log(`Sunucu http://localhost:${PORT} adresinde çalışıyor.`);
 });

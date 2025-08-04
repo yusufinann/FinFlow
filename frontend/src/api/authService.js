@@ -17,27 +17,46 @@ const login = async (username, password) => {
 };
 
 const logout = () => {
-  localStorage.removeItem('personnelFinToken');
+  sessionStorage.removeItem('personnelFinToken');
 };
 
-const register=async(payload)=>{
+
+const requestInitialPasswordOTP = async (username, tckn) => {
   try {
-    const response=await apiClient.post('/auth/register',
-      payload
-    )
+    const response = await apiClient.post('/auth/password/request-otp', {
+      username,
+      tckn,
+    });
     return response.data;
   } catch (error) {
     if (error.response && error.response.data) {
-      throw error.response.data; 
+      throw error.response.data;
     }
-    throw new Error('Giriş yapılırken bir sorun oluştu.');
+    throw new Error('OTP istenilirken bir sorun oluştu.');
   }
-}
+};
+
+const setInitialPassword = async (username, otp, newPassword) => {
+  try {
+    const response = await apiClient.post('/auth/password/set-initial', {
+      username,
+      otp,
+      newPassword,
+    });
+    return response.data;
+  } catch (error) {
+    if (error.response && error.response.data) {
+      throw error.response.data;
+    }
+    throw new Error('Şifre belirlenirken bir sorun oluştu.');
+  }
+};
 
 const authService = {
   login,
   logout,
-  register
+  setInitialPassword,
+  requestInitialPasswordOTP
 };
 
 export default authService;

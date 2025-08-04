@@ -5,7 +5,7 @@ import DashboardLeftArea from './DashboardLeftArea'
 
 const CustomerDashboardPage = () => {
   return (
-    <Box sx={{display:'flex',flexDirection:'row',gap:5 ,width:'100%',height:'100%'}}>
+    <Box sx={{display:'flex',flexDirection:'row',gap:4 ,width:'100%',height:'100%'}}>
 <DashboardLeftArea/>
  <DashboardRightArea/>
     </Box>

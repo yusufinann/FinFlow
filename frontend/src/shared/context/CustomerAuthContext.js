@@ -1,7 +1,6 @@
-import React, { createContext, useState, useContext, useEffect } from 'react';
-import { useNavigate } from 'react-router-dom';
+import React, { createContext, useState, useContext, useEffect, useCallback } from 'react';
+import { jwtDecode } from 'jwt-decode';
 import authService from '../../api/customerPanelServices/authService';
-import LoadingFallback from '../../router/components/LoadingFallback';
 
 const CustomerAuthContext = createContext(null);
 
@@ -17,54 +16,55 @@ export const CustomerAuthProvider = ({ children }) => {
   const [customer, setCustomer] = useState(null);
   const [token, setToken] = useState(null);
   const [isLoading, setIsLoading] = useState(true);
-  const navigate = useNavigate();
 
-  useEffect(() => {
-    const storedToken = localStorage.getItem('customerFinToken');
-    const storedCustomer = localStorage.getItem('customer');
-
-    if (storedToken && storedCustomer) {
-      try {
-        setToken(storedToken);
-        setCustomer(JSON.parse(storedCustomer));
-      } catch (error) {
-        console.error("localStorage'dan veri okunamadı, çıkış yapılıyor.", error);
-        localStorage.removeItem('customerFinToken');
-        localStorage.removeItem('customer');
+  const initializeAuth = useCallback(() => {
+    setIsLoading(true);
+    try {
+      const storedToken = sessionStorage.getItem('customerFinToken');
+      if (storedToken) {
+        const decoded = jwtDecode(storedToken);
+        if (decoded.exp * 1000 > Date.now()) {
+          setToken(storedToken);
+          setCustomer(decoded);
+        } else {
+          sessionStorage.removeItem('customerFinToken');
+        }
       }
+    } catch (error) {
+      console.error("Token işlenirken hata oluştu, oturum temizleniyor:", error);
+      sessionStorage.removeItem('customerFinToken');
+    } finally {
+      setIsLoading(false);
     }
-    setIsLoading(false);
   }, []);
 
+  useEffect(() => {
+    initializeAuth();
+  }, [initializeAuth]);
+
   const login = async (customer_number, password) => {
-    try {
-      const response = await authService.login(customer_number, password);
-      if (response.success && response.token && response.customer) {
-        localStorage.setItem('customerFinToken', response.token);
-        localStorage.setItem('customer', JSON.stringify(response.customer));
-        setToken(response.token);
-        setCustomer(response.customer);
-        navigate('/customer/dashboard');
-        return response;
-      }
-      throw new Error(response.message || 'Giriş başarısız.');
-    } catch (error) {
-      console.error("Login failed:", error);
-      throw error;
+    const response = await authService.login(customer_number, password);
+    if (response.success && response.token) {
+      sessionStorage.setItem('customerFinToken', response.token);
+      const decodedCustomer = jwtDecode(response.token);
+      setToken(response.token);
+      console.log('Giriş başarılı, müşteri bilgileri:', decodedCustomer);
+      setCustomer(decodedCustomer);
+      return response; // Başarılı response'u geri döndür
     }
+    throw new Error(response.message || 'Giriş başarısız.');
   };
 
-  const logout = async () => {
-    await authService.logout();
-    localStorage.removeItem('customerFinToken');
-    localStorage.removeItem('customer');
+  const logout = () => {
+    authService.logout();
+    sessionStorage.removeItem('customerFinToken');
     setToken(null);
     setCustomer(null);
-    navigate('/customer/customer-login');
+    window.location.href = '/customer-login';
   };
 
   const value = {
-    isAuthenticated: !!token,
+    isAuthenticated: !!customer,
     customer,
     token,
     login,
@@ -74,7 +74,7 @@ export const CustomerAuthProvider = ({ children }) => {
 
   return (
     <CustomerAuthContext.Provider value={value}>
-      {isLoading ? <LoadingFallback /> : children}
+      {children}
     </CustomerAuthContext.Provider>
   );
 };

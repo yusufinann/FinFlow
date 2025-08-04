@@ -13,14 +13,12 @@ import {
 const NotificationsPage = () => {
   const { notifications, unreadCount, markAllAsRead, connectionStatus } = useWebSocket();
   
-  // Sayfa görüntülendiğinde, okunmamış bildirimler varsa,
-  // bunları bir süre sonra okundu olarak işaretle.
-  // Bu, kullanıcının yeni bildirimleri görmesine fırsat tanır.
+
   useEffect(() => {
     if (unreadCount > 0) {
       const timer = setTimeout(() => {
         markAllAsRead();
-      }, 2000); // 2 saniye bekleme süresi
+      }, 2000); 
       
       return () => clearTimeout(timer);
     }

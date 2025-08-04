@@ -1,4 +1,5 @@
 import pool from "../../config/db.js";
+import { logPersonnelActivity } from "../../utils/activityLogger.js";
 
 const generateAccountIdentifiers = async (branchCode) => {
     let accountNumber, iban, isUnique = false;
@@ -44,6 +45,8 @@ export const createAccount = async (req, res) => {
   }
 
   const connection = await pool.getConnection();
+  let ibanForLog = null; // Hata durumunda bile loglayabilmek için
+
   try {
     await connection.beginTransaction();
 
@@ -55,6 +58,7 @@ export const createAccount = async (req, res) => {
     const customer_id = customerRows[0].customer_id;
 
     const { accountNumber, iban } = await generateAccountIdentifiers(branch_code);
+    ibanForLog = iban;
 
     const createAccountSql = `
       INSERT INTO accounts (
@@ -72,6 +76,15 @@ export const createAccount = async (req, res) => {
 
     await connection.commit();
 
+    await logPersonnelActivity({
+        personnel_id: created_by_personnel_id,
+        action_type: 'CREATE_ACCOUNT',
+        status: 'SUCCESS',
+        entity_type: 'ACCOUNT',
+        entity_identifier: iban,
+        details: `Müşteri TCKN ${tckn} için ${currency_code} para biriminde yeni hesap oluşturuldu.`
+    });
+
     const [newAccountRows] = await pool.query("SELECT * FROM accounts WHERE account_id = ?", [newAccountId]);
 
     res.status(201).json({
@@ -81,15 +94,25 @@ export const createAccount = async (req, res) => {
     });
 
   } catch (error) {
-    await connection.rollback();
+    if(connection) await connection.rollback();
+    
     console.error("Hesap oluşturma sırasında hata:", error.message);
+
+    await logPersonnelActivity({
+        personnel_id: created_by_personnel_id,
+        action_type: 'CREATE_ACCOUNT',
+        status: 'FAILURE',
+        entity_type: 'ACCOUNT',
+        entity_identifier: ibanForLog || `TCKN: ${tckn}`,
+        details: `Hata: ${error.message}`
+    });
 
     if (error.message.includes('müşteri bulunamadı')) {
         return res.status(404).json({ success: false, message: error.message });
     }
     
     if (error.code === 'ER_DUP_ENTRY') {
-        return res.status(409).json({ success: false, message: 'Sistem hatası: Benzersiz IBAN üretilemedi.' });
+        return res.status(409).json({ success: false, message: 'Sistem hatası: Benzersiz IBAN üretilemedi veya başka bir benzersiz kısıtlama ihlal edildi.' });
     }
 
     res.status(500).json({ success: false, message: "Hesap oluşturulurken bir sunucu hatası oluştu." });

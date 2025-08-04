@@ -20,19 +20,17 @@ import AdbIcon from "@mui/icons-material/Adb";
 import Logout from "@mui/icons-material/Logout";
 import Settings from "@mui/icons-material/Settings";
 import PersonOutline from "@mui/icons-material/PersonOutline";
-import { usePersonnelAuth } from "../shared/context/PersonnelAuthContext";
 
 const pages = [
-  { name: "Yeni Müşteri Kaydı", path: "/personnel/customers/new" },
-  { name: "Müşteri Bilgi Sorgulama", path: "/personnel/customers/search" },
-  { name: "Para Transferleri", path: "/personnel/transactions" },
-  { name: "Hesap İşlemleri", path: "/personnel/accounts" },
+  { name: "Yeni Personel Kaydı", path: "/admin/personnel/new" },
+  { name: "Personel Bilgi Sorgulama", path: "/admin/customers/search" },
+  { name: "Para Transferleri", path: "/admin/transactions" },
+  { name: "Personel Logları", path: "/admin/personnel-logs" },
 ];
 
-function Navbar() {
+function AdminNavbar() {
   const [anchorElNav, setAnchorElNav] = useState(null);
   const [anchorElUser, setAnchorElUser] = useState(null);
-  const { personnel, logout, isLoading } = usePersonnelAuth();
   const navigate = useNavigate();
 
   const handleOpenNavMenu = (event) => setAnchorElNav(event.currentTarget);
@@ -48,23 +46,9 @@ function Navbar() {
 
   const handleLogout = () => {
     handleCloseUserMenu();
-    logout();
     navigate("/personnel-login");
   };
 
-  if (isLoading) {
-    return (
-      <AppBar position="sticky" sx={{ bgcolor: "#E30613" }}>
-        <Container maxWidth="xl">
-          <Toolbar />
-        </Container>
-      </AppBar>
-    );
-  }
-
-  if (!personnel) {
-    return null;
-  }
 
   return (
     <AppBar position="sticky" sx={{ bgcolor: "#E30613" }}>
@@ -75,7 +59,7 @@ function Navbar() {
             variant="h6"
             noWrap
             component={Link}
-            to="/personnel"
+            to="/admin"
             sx={{
               mr: 2,
               display: { xs: "none", md: "flex" },
@@ -167,14 +151,14 @@ function Navbar() {
                       bgcolor: "rgba(255,255,255,0.2)",
                     }}
                   >
-                    {personnel?.first_name?.[0].toUpperCase()}
+                  A
                   </Avatar>
                 }
               >
                 <Typography
                   sx={{ display: { xs: "none", sm: "block" }, ml: 1 }}
                 >
-                  {personnel?.first_name} {personnel?.last_name}
+                 ADMN
                 </Typography>
               </Button>
             </Tooltip>
@@ -213,4 +197,4 @@ function Navbar() {
     </AppBar>
   );
 }
-export default Navbar;
+export default AdminNavbar;

@@ -13,14 +13,14 @@ import {
   StepLabel,
   Paper,
 } from '@mui/material';
-import authService from '../../../api/customerPanelServices/authService';
+import authService from '../../../../api/authService';
 
 const steps = ['Kimlik Doğrulama', 'Şifre Belirleme'];
 
-const InitialPasswordPage = () => {
+const PersonnelInitialPasswordPage = () => {
   const [activeStep, setActiveStep] = useState(0);
   const [formData, setFormData] = useState({
-    customer_number: '',
+    username: '',
     tckn: '',
     otp: '',
     newPassword: '',
@@ -42,7 +42,7 @@ const InitialPasswordPage = () => {
     setSuccess('');
     try {
       const response = await authService.requestInitialPasswordOTP(
-        formData.customer_number,
+        formData.username,
         formData.tckn
       );
       if (response.success) {
@@ -67,14 +67,14 @@ const InitialPasswordPage = () => {
     setSuccess('');
     try {
       const response = await authService.setInitialPassword(
-        formData.customer_number,
+        formData.username,
         formData.otp,
         formData.newPassword
       );
       if (response.success) {
         setSuccess(response.message + ' Giriş sayfasına yönlendiriliyorsunuz...');
         setTimeout(() => {
-          navigate('/customer-login');
+          navigate('/personnel-login');
         }, 2000);
       }
     } catch (err) {
@@ -102,7 +102,7 @@ const InitialPasswordPage = () => {
 
         {activeStep === 0 && (
           <Box component="form" onSubmit={handleRequestOTP} sx={{ width: '100%' }}>
-            <TextField margin="normal" required fullWidth label="Müşteri Numarası" name="customer_number" value={formData.customer_number} onChange={handleChange} disabled={isLoading} inputProps={{ maxLength: 6 }} />
+            <TextField margin="normal" required fullWidth label="Kullanıcı adı" name="username" value={formData.username} onChange={handleChange} disabled={isLoading} inputProps={{ maxLength: 6 }} />
             <TextField margin="normal" required fullWidth label="T.C. Kimlik Numarası" name="tckn" value={formData.tckn} onChange={handleChange} disabled={isLoading} inputProps={{ maxLength: 11 }} />
             <Button type="submit" fullWidth variant="contained" sx={{ mt: 3 }} disabled={isLoading}>
               {isLoading ? <CircularProgress size={24} /> : 'Doğrulama Kodu Gönder'}
@@ -125,4 +125,4 @@ const InitialPasswordPage = () => {
   );
 };
 
-export default InitialPasswordPage;
+export default PersonnelInitialPasswordPage;

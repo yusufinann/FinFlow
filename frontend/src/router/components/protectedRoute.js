@@ -1,41 +1,35 @@
 import React, { useEffect } from 'react';
-import { Navigate, Outlet } from 'react-router-dom';
-import LoadingFallback from '../components/LoadingFallback'; 
-import { usePersonnelAuth } from '../../shared/context/PersonnelAuthContext';
+import { useNavigate, Outlet } from 'react-router-dom';
+import LoadingFallback from './LoadingFallback';
 
-  const parseJwt = (token) => {
-  try {
-    const base64Url = token.split(".")[1];
-    const base64 = base64Url.replace(/-/g, "+").replace(/_/g, "/");
-    const jsonPayload = decodeURIComponent(
-      atob(base64)
-        .split("")
-        .map((c) => "%" + ("00" + c.charCodeAt(0).toString(16)).slice(-2))
-        .join("")
-    );
-    return JSON.parse(jsonPayload);
-  } catch (error) {
-    return null;
-  }
-};
+const ProtectedRoute = ({ allowedRoles, useAuthHook, loginPath }) => {
+  const navigate = useNavigate();
+  // Değişiklik burada: `user` yerine `personnel` olarak isimlendiriyoruz
+  const { isAuthenticated, personnel, isLoading } = useAuthHook();
 
-const ProtectedRoute = () => {
-  const { isAuthenticated, isLoading,personnelToken ,logout} = usePersonnelAuth();
-
-  const decodedToken=personnelToken?parseJwt(personnelToken):null;
-  const isTokenExpired = !decodedToken || decodedToken.exp * 1000 < Date.now();
-  
   useEffect(() => {
-    if (personnelToken && isTokenExpired) {
-      logout();
+    if (isLoading) {
+      return;
     }
-  }, [personnelToken, isTokenExpired, logout]);
+
+    if (!isAuthenticated || !personnel) {
+      navigate(loginPath, { replace: true });
+      return;
+    }
+
+    if (!allowedRoles || !allowedRoles.includes(personnel.role)) {
+      navigate('/', { replace: true });
+    }
+  }, [isLoading, isAuthenticated, personnel, allowedRoles, navigate, loginPath]);
+
 
   if (isLoading) {
     return <LoadingFallback />;
   }
+  
+  const isAuthorized = isAuthenticated && personnel && allowedRoles.includes(personnel.role);
 
-  return isAuthenticated ? <Outlet /> : <Navigate to="/personnel-login" replace />;
+  return isAuthorized ? <Outlet /> : <LoadingFallback />;
 };
 
 export default ProtectedRoute;

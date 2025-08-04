@@ -1,8 +1,8 @@
 import axios from 'axios';
-import { CUSTOMER_API_URL} from '../../config/config.js';
+import { ADMIN_API_URL} from '../../config/config.js';
 
 const apiClient = axios.create({
-  baseURL: CUSTOMER_API_URL,
+  baseURL: ADMIN_API_URL,
   headers: {
     'Content-Type': 'application/json',
   },
@@ -10,7 +10,7 @@ const apiClient = axios.create({
 
 apiClient.interceptors.request.use(
   (config) => {
-    const token = sessionStorage.getItem('customerFinToken');
+    const token = sessionStorage.getItem('personnelFinToken');
     
     if (token) {
       config.headers['Authorization'] = `Bearer ${token}`;

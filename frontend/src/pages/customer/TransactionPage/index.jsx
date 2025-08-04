@@ -173,7 +173,7 @@ const TransactionPage = () => {
   const selectedAccount = myAccounts.find(acc => acc.account_id === sourceAccountId);
 
   return (
-    <Box sx={{ minHeight: '100vh'}}>
+    <Box sx={{ minHeight: '100%'}}>
       <Container maxWidth="lg">
         <Box sx={{ display: 'flex', flexDirection: 'column', gap: 2 }}>
 

@@ -1,5 +1,3 @@
-// api/authService.js (Güncel Hali)
-
 import apiClient from './api';
 
 const login = async (customer_number, password) => {
@@ -18,7 +16,7 @@ const login = async (customer_number, password) => {
 };
 
 const logout = () => {
-  localStorage.removeItem('customerFinToken');
+  sessionStorage.removeItem('customerFinToken');
 };
 
 const requestInitialPasswordOTP = async (customer_number, tckn) => {
@@ -52,7 +50,7 @@ const setInitialPassword = async (customer_number, otp, newPassword) => {
   }
 };
 export const getAuthHeader = () => {
-  const token = localStorage.getItem('customerFinToken');
+  const token = sessionStorage.getItem('customerFinToken');
   if (token) {
     return { 
       'Content-Type': 'application/json',

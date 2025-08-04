@@ -57,6 +57,7 @@ export const login = async (req, res) => {
             id: customer.customer_id,
             customerNumber: customer.customer_number,
             role: 'customer',
+            fullName: `${customer.first_name} ${customer.last_name}`,
         };
 
         const token = jwt.sign(payload, process.env.JWT_SECRET, { expiresIn: '24h' });

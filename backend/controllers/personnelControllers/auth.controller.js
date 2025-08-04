@@ -3,50 +3,10 @@ import redisClient from "../../config/redisClient.js";
 import bcrypt from "bcrypt";
 import jwt from "jsonwebtoken";
 
-const SALT_ROUNDS = 10;
+
 const MAX_LOGIN_ATTEMPTS = 5;
 const LOCK_TIME = 15 * 60; // 15 dakika
 
-export const register = async (req, res) => {
-  const { username, password, first_name, last_name, branch_code } = req.body;
-
-  if (!username || !password || !first_name || !last_name || !branch_code) {
-    return res.status(400).json({
-      success: false,
-      message: 'Tüm alanlar (Kullanıcı Adı, Şifre, Ad, Soyad, Şube Kodu) zorunludur.',
-    });
-  }
-
-  try {
-    const [existingUser] = await pool.query("SELECT customer_id FROM customers WHERE username = ?", [username]);
-    if (existingUser.length > 0) {
-      return res.status(409).json({
-        success: false,
-        message: 'Bu kullanıcı adı zaten mevcut.',
-      });
-    }
-
-    const hashedPassword = await bcrypt.hash(password, SALT_ROUNDS);
-
-    const insertSql = `
-        INSERT INTO customers (first_name, last_name, username, password_hash, branch_code, role) 
-        VALUES (?, ?, ?, ?, ?, 'PERSONNEL')
-    `;
-    await pool.query(insertSql, [first_name, last_name, username, hashedPassword, branch_code]);
-    
-    res.status(201).json({
-      success: true,
-      message: 'Personel başarıyla kaydedildi!'
-    });
-
-  } catch (error) {
-     console.error('Register sırasında hata:', error);
-    res.status(500).json({
-      success: false,
-      message: 'Sunucu hatası. Kayıt işlemi başarısız oldu.',
-    });
-  }
-};
 
 export const login = async (req, res) => {
   const { username, password } = req.body;
@@ -69,16 +29,19 @@ export const login = async (req, res) => {
         });
     }
 
-    // SQL SORGUSUNA first_name ve last_name ALANLARINI EKLE
-    const sql = "SELECT customer_id, first_name, last_name, username, password_hash, role, branch_code FROM customers WHERE username = ? AND role = 'PERSONNEL'";
+    const sql = `
+      SELECT customer_id, first_name, last_name, username, password_hash, role, branch_code 
+      FROM customers 
+      WHERE username = ? AND (role = 'PERSONNEL' OR role = 'ADMIN')
+    `;
     const [rows] = await pool.query(sql, [username]);
-    const personnel = rows[0];
+    const user = rows[0]; 
 
-    if (!personnel || !personnel.password_hash) {
+    if (!user || !user.password_hash) {
       return res.status(401).json({ success: false, message: 'Kullanıcı adı veya şifre hatalı.' });
     }
 
-    const isPasswordMatch = await bcrypt.compare(password, personnel.password_hash);
+    const isPasswordMatch = await bcrypt.compare(password, user.password_hash);
     if (!isPasswordMatch) {
       const newAttempts = await redisClient.incr(attemptKey);
       if (newAttempts === 1) {
@@ -89,14 +52,14 @@ export const login = async (req, res) => {
 
     await redisClient.del(attemptKey);
 
-    // PAYLOAD'A first_name ve last_name'i EKLE
+    // Payload'a kullanıcının tüm bilgilerini ekliyoruz. Rol zaten dahil.
     const payload = {
-      id: personnel.customer_id,
-      username: personnel.username,
-      first_name: personnel.first_name,
-      last_name: personnel.last_name,
-      role: personnel.role,
-      branch_code: personnel.branch_code
+      id: user.customer_id,
+      username: user.username,
+      first_name: user.first_name,
+      last_name: user.last_name,
+      role: user.role, // Bu çok önemli!
+      branch_code: user.branch_code
     };
 
     const token = jwt.sign(payload, process.env.JWT_SECRET, { expiresIn: '24h' });
