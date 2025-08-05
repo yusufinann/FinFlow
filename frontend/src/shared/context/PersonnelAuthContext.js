@@ -1,4 +1,4 @@
-import React, { createContext, useState, useContext, useEffect, useCallback } from 'react';
+import React, { createContext, useState, useContext, useEffect, useCallback, useMemo } from 'react';
 import { jwtDecode } from 'jwt-decode';
 import authService from '../../api/authService';
 
@@ -34,7 +34,7 @@ export const PersonnelAuthProvider = ({ children }) => {
     initializeAuth();
   }, [initializeAuth]);
 
-  const login = async (username, password) => {
+  const login = useCallback(async (username, password) => {
     try {
       const data = await authService.login(username, password);
       if (data.success && data.token) {
@@ -48,22 +48,22 @@ export const PersonnelAuthProvider = ({ children }) => {
         const errorMessage = error.response?.data?.message || 'Giriş işlemi sırasında bir hata oluştu.';
         throw new Error(errorMessage);
     }
-  };
+  }, []);
 
-  const logout = () => {
+  const logout = useCallback(() => {
     sessionStorage.removeItem('personnelFinToken');
     setPersonnel(null);
     setToken(null);
-  };
+  }, []);
 
-  const value = {
+  const value = useMemo(() => ({
     personnel,
     token,
     isAuthenticated: !!personnel,
     isLoading,
     login,
     logout,
-  };
+  }), [personnel, token, isLoading, login, logout]);
 
   return (
     <PersonnelAuthContext.Provider value={value}>

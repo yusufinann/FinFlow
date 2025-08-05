@@ -23,7 +23,7 @@ import PersonOutline from "@mui/icons-material/PersonOutline";
 
 const pages = [
   { name: "Yeni Personel Kaydı", path: "/admin/personnel/new" },
-  { name: "Personel Bilgi Sorgulama", path: "/admin/customers/search" },
+  { name: "Personel Bilgi Sorgulama", path: "/admin/personnels/search" },
   { name: "Para Transferleri", path: "/admin/transactions" },
   { name: "Personel Logları", path: "/admin/personnel-logs" },
 ];

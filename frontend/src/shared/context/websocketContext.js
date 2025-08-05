@@ -1,46 +1,38 @@
-import React, { createContext, useContext, useEffect, useState, useRef, useCallback } from 'react';
+import React, { createContext, useContext, useEffect, useState, useRef, useCallback, useMemo } from 'react';
 import notificationService from '../../api/customerPanelServices/notificationService';
 
 const WebSocketContext = createContext(null);
 
-export const useWebSocket = () => {
-  return useContext(WebSocketContext);
-};
+export const useWebSocket = () => useContext(WebSocketContext);
 
-export const WebSocketProvider = ({ children, auth,userType  }) => {
+export const WebSocketProvider = ({ children, auth, userType }) => {
   const [notifications, setNotifications] = useState([]);
   const [unreadCount, setUnreadCount] = useState(0);
+  const [personnelStatuses, setPersonnelStatuses] = useState({});
   const [lastMessage, setLastMessage] = useState(null);
   const [connectionStatus, setConnectionStatus] = useState('disconnected');
   const webSocketRef = useRef(null);
-  const reconnectTimerRef = useRef(null);
 
   const fetchNotifications = useCallback(async () => {
-    if (!auth?.token) return;
-    if(userType === 'customer'&&auth?.token) {
-       try {
-      const data = await notificationService.getMyNotifications();
-      if (data.success) {
-        setNotifications(data.notifications);
-        setUnreadCount(data.unreadCount);
+    if (userType === 'customer' && auth?.token) {
+      try {
+        const data = await notificationService.getMyNotifications();
+        if (data.success) {
+          setNotifications(data.notifications);
+          setUnreadCount(data.unreadCount);
+        }
+      } catch (error) {
+        console.error("Failed to fetch notifications:", error);
       }
-    } catch (error) {
-      console.error("Failed to fetch notifications:", error);
     }
-    }
-
-   
-  }, [userType,auth?.token]);
+  }, [userType, auth?.token]);
 
   useEffect(() => {
-    if (auth?.token) {
-      fetchNotifications();
-    }
-  }, [auth?.token, fetchNotifications]);
+    fetchNotifications();
+  }, [fetchNotifications]);
 
   useEffect(() => {
-    if (reconnectTimerRef.current) clearTimeout(reconnectTimerRef.current);
-    if (!(auth && auth.user && auth.token)) {
+    if (!(auth && auth.token)) {
       if (webSocketRef.current) webSocketRef.current.close(1000, 'User logged out');
       return;
     }
@@ -48,40 +40,50 @@ export const WebSocketProvider = ({ children, auth,userType  }) => {
     const connect = () => {
       const ws = new WebSocket(`ws://localhost:3001?token=${auth.token}`);
       webSocketRef.current = ws;
-
-      ws.onopen = () => {
-        setConnectionStatus('connected');
-        if (reconnectTimerRef.current) clearTimeout(reconnectTimerRef.current);
-      };
-
+      setConnectionStatus('connecting');
+      ws.onopen = () => setConnectionStatus('connected');
       ws.onmessage = (event) => {
         try {
           const message = JSON.parse(event.data);
           setLastMessage({ ...message, id: Date.now() });
-          if (message.newNotification === true) {
-            fetchNotifications();
+          switch (message.type) {
+            case 'INITIAL_PERSONNEL_STATUS':
+              setPersonnelStatuses(prev => {
+                const newStatuses = { ...prev };
+                message.payload.forEach(p => { newStatuses[p.id] = p.status; });
+                return newStatuses;
+              });
+              break;
+            case 'PERSONNEL_STATUS_UPDATE':
+              setPersonnelStatuses(prev => ({ ...prev, [message.payload.id]: message.payload.status }));
+              break;
+            case 'INCOMING_TRANSFER':
+            case 'NEW_MESSAGE':
+              if (message.newNotification) fetchNotifications();
+              break;
+            default: break;
           }
-        } catch (error) {
-          console.error('[WebSocket] Failed to parse message:', error);
+        } catch (error) { console.error('[WebSocket] Failed to parse message:', error); }
+      };
+      ws.onclose = () => {
+        setConnectionStatus('disconnected');
+        if (webSocketRef.current && webSocketRef.current.readyState !== WebSocket.CLOSED) {
+          setTimeout(connect, 5000);
         }
       };
-
-      ws.onclose = (event) => {
-        if (event.code !== 1000) {
-          reconnectTimerRef.current = setTimeout(connect, 5000);
-        }
-      };
+      ws.onerror = () => { ws.close(); };
     };
-
     connect();
-
     return () => {
-      if (reconnectTimerRef.current) clearTimeout(reconnectTimerRef.current);
-      if (webSocketRef.current) webSocketRef.current.close(1000, 'Component unmounting');
+      if (webSocketRef.current) {
+        webSocketRef.current.close(1000, 'Component unmounting');
+        webSocketRef.current = null;
+      }
     };
   }, [auth, fetchNotifications]);
 
   const markAllAsRead = useCallback(async () => {
+    if(userType !== 'customer') return;
     try {
       await notificationService.markAllAsRead();
       setNotifications(prev => prev.map(n => ({ ...n, is_read: true })));
@@ -89,15 +91,16 @@ export const WebSocketProvider = ({ children, auth,userType  }) => {
     } catch (error) {
       console.error("Failed to mark notifications as read:", error);
     }
-  }, []);
+  }, [userType]);
 
-  const value = {
+  const value = useMemo(() => ({
     connectionStatus,
     lastMessage,
     notifications,
     unreadCount,
     markAllAsRead,
-  };
+    personnelStatuses,
+  }), [connectionStatus, lastMessage, notifications, unreadCount, markAllAsRead, personnelStatuses]);
 
   return (
     <WebSocketContext.Provider value={value}>

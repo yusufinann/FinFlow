@@ -44,6 +44,8 @@ app.use('/api/admin/personnel', adminRoutes);
 
 const server = http.createServer(app);
 
+// server.js içindeki server.on('upgrade', ...) bloğunu güncelleyin
+
 server.on('upgrade', (request, socket, head) => {
   try {
     const { pathname, searchParams } = new URL(request.url, `http://${request.headers.host}`);
@@ -55,15 +57,18 @@ server.on('upgrade', (request, socket, head) => {
         return;
       }
       
+      // JWT'yi doğrula ve payload'ın tamamını al
       const decoded = jwt.verify(token, process.env.JWT_SECRET);
-      const entityId = decoded.id || decoded.customerId;
-
-      if (!entityId) {
-        throw new Error('Token does not contain a valid ID.');
+      
+      // 'id' veya 'customerId' yerine tek bir ID alanı kullandığımızı varsayalım
+      // Token'da role, id, name gibi alanların olduğundan emin olun
+      if (!decoded.id || !decoded.role) {
+        throw new Error('Token does not contain required fields (id, role).');
       }
       
       wss.handleUpgrade(request, socket, head, (ws) => {
-        wss.emit('connection', ws, request, entityId);
+        // 'connection' olayına decoded token'ın tamamını gönder
+        wss.emit('connection', ws, request, decoded);
       });
     } else {
       socket.destroy();

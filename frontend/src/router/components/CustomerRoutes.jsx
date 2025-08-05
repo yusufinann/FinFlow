@@ -1,6 +1,7 @@
 import React, { lazy } from "react";
 import { Routes, Route } from "react-router-dom";
 import ProtectedCustomerRoute from "./ProtectedCustomerRoute";
+import InitialPasswordPage from "../../pages/customer/CustomerLoginPage/InitalPasswordPage";
 
 const CustomerDashboardPage = lazy(() => import("../../pages/customer/CustomerDashboardPage"));
 const ExchangeRates = lazy(() => import("../../pages/customer/ExchangeRates"));

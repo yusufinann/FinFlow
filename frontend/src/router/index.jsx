@@ -45,7 +45,7 @@ const AppRouter = () => {
       <Suspense fallback={<LoadingFallback />}>
         <Routes>
           <Route path="/" element={<LandingPage />} />
-          <Route path="/initial-password" element={<InitialPasswordPage />} />
+          <Route path="customer/initial-password" element={<InitialPasswordPage />} />
           <Route path="/personnel/initial-password" element={<PersonnelInitialPasswordPage />} />
 
           <Route element={<PersonnelAuthProvider><Outlet /></PersonnelAuthProvider>}>
