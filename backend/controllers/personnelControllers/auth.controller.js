@@ -2,7 +2,7 @@ import pool from "../../config/db.js";
 import redisClient from "../../config/redisClient.js";
 import bcrypt from "bcrypt";
 import jwt from "jsonwebtoken";
-
+import { sendPasswordResetCode } from "../../utils/emailService.js";
 
 const MAX_LOGIN_ATTEMPTS = 5;
 const LOCK_TIME = 15 * 60; // 15 dakika
@@ -82,4 +82,143 @@ export const login = async (req, res) => {
 
 export const logout = (req, res) => {
     res.status(200).json({ success: true, message: 'Çıkış başarılı.' });
+};
+
+const RESET_CODE_EXPIRATION = 3 * 60; // 3 dakika
+const TEMP_TOKEN_EXPIRATION = '15m'; // 15 dakika
+
+
+export const requestPasswordReset = async (req, res) => {
+  console.log("Şifre sıfırlama isteği geldi. Body:", req.body);
+  const { username, tckn, email } = req.body;
+
+  if (!username || !tckn || !email) {
+    return res.status(400).json({ success: false, message: "Tüm alanlar zorunludur." });
+  }
+
+  try {
+   
+    const sql = `
+      SELECT customer_id, email 
+      FROM customers 
+      WHERE username = ? AND tckn = ? AND email = ? AND role = 'ADMIN'
+    `;
+    const [rows] = await pool.query(sql, [username, tckn, email]);
+    const user = rows[0];
+
+    // Kullanıcı bulunamazsa veya bilgiler eşleşmezse, güvenlik için genel bir mesaj döndür.
+    // Bu, hangi bilginin yanlış olduğunu sızdırmayı önler.
+    if (!user) {
+      return res.status(404).json({ success: false, message: "Girilen bilgilerle eşleşen bir admin hesabı bulunamadı." });
+    }
+
+    // 6 haneli rastgele bir kod oluştur
+    const resetCode = Math.floor(100000 + Math.random() * 900000).toString();
+    const redisKey = `reset_code:admin:${username}`;
+
+    // Kodu Redis'e 3 dakikalık geçerlilik süresiyle kaydet
+    await redisClient.set(redisKey, resetCode, 'EX', RESET_CODE_EXPIRATION);
+    
+    // E-posta ile kodu gönder
+    await sendPasswordResetCode(user.email, resetCode);
+
+    res.status(200).json({
+      success: true,
+      message: "Bilgileriniz doğruysa, e-posta adresinize bir sıfırlama kodu gönderilmiştir."
+    });
+
+  } catch (error) {
+    console.error('Şifre sıfırlama talebi sırasında hata:', error);
+    res.status(500).json({ success: false, message: "Sunucu hatası. Lütfen daha sonra tekrar deneyin." });
+  }
+};
+
+/**
+ * Adım 2: Kullanıcının girdiği sıfırlama kodunu doğrular.
+ */
+export const verifyResetCode = async (req, res) => {
+  const { username, resetCode } = req.body;
+
+  if (!username || !resetCode) {
+    return res.status(400).json({ success: false, message: "Kullanıcı adı ve sıfırlama kodu zorunludur." });
+  }
+
+  const redisKey = `reset_code:admin:${username}`;
+
+  try {
+    const storedCode = await redisClient.get(redisKey);
+
+    if (!storedCode) {
+      return res.status(400).json({ success: false, message: "Kod geçersiz veya süresi dolmuş. Lütfen yeni bir kod talep edin." });
+    }
+
+    if (storedCode !== resetCode) {
+      return res.status(400).json({ success: false, message: "Girilen kod hatalı." });
+    }
+
+    // Kod doğruysa, kodu Redis'ten silerek tekrar kullanılmasını engelle
+    await redisClient.del(redisKey);
+
+    // Kullanıcıya şifresini değiştirmesi için kısa süreli bir token oluştur
+    const tempPayload = { username, purpose: 'password-reset' };
+    const tempToken = jwt.sign(tempPayload, process.env.JWT_SECRET, { expiresIn: TEMP_TOKEN_EXPIRATION });
+
+    res.status(200).json({
+      success: true,
+      message: "Kod doğrulandı. Şimdi yeni şifrenizi belirleyebilirsiniz.",
+      resetToken: tempToken
+    });
+
+  } catch (error) {
+    console.error('Sıfırlama kodu doğrulanırken hata:', error);
+    res.status(500).json({ success: false, message: "Sunucu hatası." });
+  }
+};
+
+/**
+ * Adım 3: Yeni şifreyi ayarlar.
+ */
+export const resetPassword = async (req, res) => {
+  const { newPassword, resetToken } = req.body;
+
+  if (!newPassword || !resetToken) {
+    return res.status(400).json({ success: false, message: "Yeni şifre ve token zorunludur." });
+  }
+
+  try {
+    // Geçici token'ı doğrula
+    const decoded = jwt.verify(resetToken, process.env.JWT_SECRET);
+    
+    // Token'ın doğru amaçla oluşturulduğundan emin ol
+    if (decoded.purpose !== 'password-reset') {
+        return res.status(401).json({ success: false, message: "Geçersiz token." });
+    }
+
+    const { username } = decoded;
+
+    // Yeni şifreyi hash'le
+    const salt = await bcrypt.genSalt(10);
+    const hashedPassword = await bcrypt.hash(newPassword, salt);
+
+    // Veritabanında şifreyi güncelle
+    const sql = `UPDATE customers SET password_hash = ? WHERE username = ? AND role = 'ADMIN'`;
+    const [result] = await pool.query(sql, [hashedPassword, username]);
+
+    if (result.affectedRows === 0) {
+      // Bu durum normalde yaşanmamalı ama bir güvenlik katmanı olarak ekleyebiliriz.
+      return res.status(404).json({ success: false, message: "Kullanıcı bulunamadı." });
+    }
+
+    res.status(200).json({ success: true, message: "Şifreniz başarıyla güncellendi. Şimdi giriş yapabilirsiniz." });
+
+  } catch (error) {
+    if (error instanceof jwt.TokenExpiredError) {
+        return res.status(401).json({ success: false, message: "Şifre sıfırlama oturumunuzun süresi doldu. Lütfen tekrar deneyin." });
+    }
+    if (error instanceof jwt.JsonWebTokenError) {
+        return res.status(401).json({ success: false, message: "Geçersiz token." });
+    }
+    console.error('Şifre sıfırlanırken hata:', error);
+    res.status(500).json({ success: false, message: "Sunucu hatası." });
+  }
 };

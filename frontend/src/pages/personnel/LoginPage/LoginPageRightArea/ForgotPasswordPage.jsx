@@ -1,5 +1,4 @@
 import React, { useState } from 'react';
-import { useNavigate } from 'react-router-dom';
 import {
   Box,
   Typography,
@@ -21,25 +20,25 @@ import {
   ArrowBack,
   CheckCircle
 } from '@mui/icons-material';
-import authService from '../../../api/customerPanelServices/authService';
 
-const InitialPasswordPage = ({ onBackToLogin }) => {
+const ForgotPasswordPage = ({ onBackToLogin }) => {
   const [step, setStep] = useState(0);
-  const [customerNumber, setCustomerNumber] = useState('');
-  const [tckn, setTckn] = useState('');
-  const [otp, setOtp] = useState('');
+  const [username, setUsername] = useState('');
+  const [tckn, setTcKimlikNo] = useState('');
+  const [email, setEmail] = useState('');
+  const [resetCode, setResetCode] = useState('');
   const [newPassword, setNewPassword] = useState('');
   const [confirmPassword, setConfirmPassword] = useState('');
   
   const [error, setError] = useState('');
   const [success, setSuccess] = useState('');
   const [loading, setLoading] = useState(false);
-  const navigate = useNavigate();
+  const [resetToken, setResetToken] = useState('');
 
-  const steps = ['Kimlik Doğrulama', 'Kod Doğrulama', 'Şifre Belirleme'];
+  const steps = ['Kimlik Doğrulama', 'Kod Doğrulama', 'Yeni Şifre'];
 
-  const handleRequestOTP = async () => {
-    if (!customerNumber || !tckn) {
+  const handleRequestReset = async () => {
+    if (!username || !tckn || !email) {
       setError('Lütfen tüm alanları doldurunuz.');
       return false;
     }
@@ -47,16 +46,19 @@ const InitialPasswordPage = ({ onBackToLogin }) => {
     setError('');
     setSuccess('');
     try {
-      const response = await authService.requestInitialPasswordOTP(
-        customerNumber,
-        tckn
-      );
-      if (response.success) {
-        setSuccess(response.message);
-        return true;
+      const response = await fetch('http://localhost:3001/api/auth/forgot-password/request', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ username, tckn, email }),
+      });
+      const data = await response.json();
+      if (!response.ok) {
+        throw new Error(data.message || 'Bir hata oluştu.');
       }
+      setSuccess(data.message);
+      return true;
     } catch (err) {
-      setError(err.message || 'Bir hata oluştu.');
+      setError(err.message);
       return false;
     } finally {
       setLoading(false);
@@ -68,16 +70,33 @@ const InitialPasswordPage = ({ onBackToLogin }) => {
     setSuccess('');
     
     if (step === 0) {
-      const success = await handleRequestOTP();
+      const success = await handleRequestReset();
       if (success) {
         setStep(1);
       }
     } else if (step === 1) {
-      if (!otp) {
+      if (!resetCode) {
         setError('Lütfen doğrulama kodunu giriniz.');
         return;
       }
-      setStep(2);
+      setLoading(true);
+      try {
+        const response = await fetch('http://localhost:3001/api/auth/forgot-password/verify', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ username, resetCode }),
+        });
+        const data = await response.json();
+        if (!response.ok) {
+          throw new Error(data.message || 'Kod doğrulanamadı.');
+        }
+        setResetToken(data.resetToken);
+        setStep(2);
+      } catch (err) {
+        setError(err.message);
+      } finally {
+        setLoading(false);
+      }
     } else if (step === 2) {
       if (!newPassword || !confirmPassword) {
         setError('Lütfen tüm alanları doldurunuz.');
@@ -93,16 +112,18 @@ const InitialPasswordPage = ({ onBackToLogin }) => {
       }
       setLoading(true);
       try {
-        const response = await authService.setInitialPassword(
-          customerNumber,
-          otp,
-          newPassword
-        );
-        if (response.success) {
-          setStep(3);
+        const response = await fetch('http://localhost:3001/api/auth/forgot-password/reset', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ newPassword, resetToken }),
+        });
+        const data = await response.json();
+        if (!response.ok) {
+          throw new Error(data.message || 'Şifre sıfırlanamadı.');
         }
+        setStep(3);
       } catch (err) {
-        setError(err.message || 'Bir hata oluştu.');
+        setError(err.message);
       } finally {
         setLoading(false);
       }
@@ -110,11 +131,7 @@ const InitialPasswordPage = ({ onBackToLogin }) => {
   };
 
   const handleResendCode = async () => {
-    await handleRequestOTP();
-  };
-
-  const handleGoToLogin = () => {
-    navigate('/customer-login');
+    await handleRequestReset();
   };
 
   const renderStepContent = () => {
@@ -128,12 +145,11 @@ const InitialPasswordPage = ({ onBackToLogin }) => {
             <TextField
               fullWidth
               required
-              placeholder="Müşteri Numaranız"
+              placeholder="Kullanıcı Adınız"
               variant="outlined"
-              value={customerNumber}
-              onChange={(e) => setCustomerNumber(e.target.value)}
+              value={username}
+              onChange={(e) => setUsername(e.target.value)}
               disabled={loading}
-              inputProps={{ maxLength: 6 }}
               sx={{ '& .MuiOutlinedInput-root': { backgroundColor: 'white', borderRadius: '25px', '& fieldset': { border: 'none' }, '&.Mui-focused fieldset': { border: '2px solid #dc143c' }}, '& .MuiInputBase-input': { padding: '16px 20px', fontSize: '14px' }}}
             />
             <TextField
@@ -142,9 +158,20 @@ const InitialPasswordPage = ({ onBackToLogin }) => {
               placeholder="TC Kimlik Numaranız"
               variant="outlined"
               value={tckn}
-              onChange={(e) => setTckn(e.target.value)}
+              onChange={(e) => setTcKimlikNo(e.target.value)}
               disabled={loading}
               inputProps={{ maxLength: 11 }}
+              sx={{ '& .MuiOutlinedInput-root': { backgroundColor: 'white', borderRadius: '25px', '& fieldset': { border: 'none' }, '&.Mui-focused fieldset': { border: '2px solid #dc143c' }}, '& .MuiInputBase-input': { padding: '16px 20px', fontSize: '14px' }}}
+            />
+            <TextField
+              fullWidth
+              required
+              placeholder="E-posta Adresiniz"
+              variant="outlined"
+              type="email"
+              value={email}
+              onChange={(e) => setEmail(e.target.value)}
+              disabled={loading}
               sx={{ '& .MuiOutlinedInput-root': { backgroundColor: 'white', borderRadius: '25px', '& fieldset': { border: 'none' }, '&.Mui-focused fieldset': { border: '2px solid #dc143c' }}, '& .MuiInputBase-input': { padding: '16px 20px', fontSize: '14px' }}}
             />
           </Stack>
@@ -154,18 +181,18 @@ const InitialPasswordPage = ({ onBackToLogin }) => {
         return (
           <Stack spacing={3}>
             <Typography variant="h6" sx={{ color: 'white', textAlign: 'center', mb: 2 }}>
-              SMS Doğrulama
+              E-posta Doğrulama
             </Typography>
             <Typography variant="body2" sx={{ color: 'white', textAlign: 'center' }}>
-              Kayıtlı telefon numaranıza gönderilen 6 haneli doğrulama kodunu giriniz. Kod 3 dakika geçerlidir.
+              {email} adresinize gönderilen 6 haneli doğrulama kodunu giriniz. Kod 3 dakika geçerlidir.
             </Typography>
             <TextField
               fullWidth
               required
-              placeholder="Doğrulama Kodu (OTP)"
+              placeholder="Doğrulama Kodu"
               variant="outlined"
-              value={otp}
-              onChange={(e) => setOtp(e.target.value)}
+              value={resetCode}
+              onChange={(e) => setResetCode(e.target.value)}
               disabled={loading}
               inputProps={{ maxLength: 6, style: { textAlign: 'center', fontSize: '18px', letterSpacing: '4px' } }}
               sx={{ '& .MuiOutlinedInput-root': { backgroundColor: 'white', borderRadius: '25px', '& fieldset': { border: 'none' }, '&.Mui-focused fieldset': { border: '2px solid #dc143c' }}, '& .MuiInputBase-input': { padding: '16px 20px', fontSize: '18px' }}}
@@ -185,7 +212,7 @@ const InitialPasswordPage = ({ onBackToLogin }) => {
         return (
           <Stack spacing={3}>
             <Typography variant="h6" sx={{ color: 'white', textAlign: 'center', mb: 2 }}>
-              İlk Şifrenizi Belirleyin
+              Yeni Şifrenizi Belirleyin
             </Typography>
             <TextField
               fullWidth
@@ -220,10 +247,10 @@ const InitialPasswordPage = ({ onBackToLogin }) => {
           <Stack spacing={3} alignItems="center">
             <CheckCircle sx={{ fontSize: 60, color: 'white' }} />
             <Typography variant="h6" sx={{ color: 'white', textAlign: 'center' }}>
-              İlk Şifreniz Başarıyla Oluşturuldu
+              Şifreniz Başarıyla Değiştirildi
             </Typography>
             <Typography variant="body2" sx={{ color: 'white', textAlign: 'center' }}>
-              Artık yeni şifrenizle sisteme giriş yapabilirsiniz.
+              Yeni şifrenizle giriş yapabilirsiniz.
             </Typography>
           </Stack>
         );
@@ -275,10 +302,10 @@ const InitialPasswordPage = ({ onBackToLogin }) => {
             <Grid item xs={12} md={7} sx={{ display: 'flex', alignItems: 'center', justifyContent: 'center', py: 4 }}>
               <Box sx={{ width: '100%', maxWidth: '500px', px: 2 }}>
                 <Box sx={{ display: 'flex', alignItems: 'center', mb: 4 }}>
-                  <Button onClick={onBackToLogin || handleGoToLogin} sx={{ color: 'white', minWidth: 'auto', p: 1, mr: 2, '&:hover': { backgroundColor: 'rgba(255,255,255,0.1)' }}}>
+                  <Button onClick={onBackToLogin} sx={{ color: 'white', minWidth: 'auto', p: 1, mr: 2, '&:hover': { backgroundColor: 'rgba(255,255,255,0.1)' }}}>
                     <ArrowBack />
                   </Button>
-                  <Typography variant="h4" sx={{ color: 'white', fontWeight: 'bold' }}>İlk Şifre Belirleme</Typography>
+                  <Typography variant="h4" sx={{ color: 'white', fontWeight: 'bold' }}>Şifremi Unuttum</Typography>
                 </Box>
 
                 {step < 3 && (
@@ -303,12 +330,12 @@ const InitialPasswordPage = ({ onBackToLogin }) => {
 
                   {step < 3 && (
                     <Button fullWidth variant="contained" size="large" onClick={handleNext} disabled={loading} sx={{ py: 2, mt: 3, fontWeight: 'bold', backgroundColor: '#2c3e50', borderRadius: '25px', fontSize: '16px', color: 'white', '&:hover': { backgroundColor: '#1a252f' }, '&:disabled': { backgroundColor: 'rgba(44, 62, 80, 0.5)' }}}>
-                      {loading ? <CircularProgress size={24} sx={{ color: 'white' }} /> : step === 2 ? 'ŞİFREYİ OLUŞTUR' : 'DEVAM'}
+                      {loading ? <CircularProgress size={24} sx={{ color: 'white' }} /> : step === 2 ? 'ŞİFREYİ DEĞİŞTİR' : 'DEVAM'}
                     </Button>
                   )}
 
                   {step === 3 && (
-                    <Button fullWidth variant="contained" size="large" onClick={handleGoToLogin} sx={{ py: 2, mt: 3, fontWeight: 'bold', backgroundColor: '#2c3e50', borderRadius: '25px', fontSize: '16px', color: 'white', '&:hover': { backgroundColor: '#1a252f' }}}>
+                    <Button fullWidth variant="contained" size="large" onClick={onBackToLogin} sx={{ py: 2, mt: 3, fontWeight: 'bold', backgroundColor: '#2c3e50', borderRadius: '25px', fontSize: '16px', color: 'white', '&:hover': { backgroundColor: '#1a252f' }}}>
                       GİRİŞ SAYFASINA DÖN
                     </Button>
                   )}
@@ -320,21 +347,21 @@ const InitialPasswordPage = ({ onBackToLogin }) => {
               <Paper elevation={0} sx={{ backgroundColor: 'rgba(255,255,255,0.9)', borderRadius: 3, p: 4, width: '100%', maxWidth: '400px', mx: 2 }}>
                 <Box sx={{ display: 'flex', alignItems: 'center', mb: 3 }}>
                   <Box sx={{ width: 40, height: 40, backgroundColor: '#dc143c', borderRadius: '50%', display: 'flex', alignItems: 'center', justifyContent: 'center', mr: 2 }}>
-                    <Typography sx={{ color: 'white', fontSize: '20px' }}>🔐</Typography>
+                    <Typography sx={{ color: 'white', fontSize: '20px' }}>🔒</Typography>
                   </Box>
-                  <Typography variant="h6" sx={{ fontWeight: 'bold', color: '#333' }}>İlk Şifre Bilgilendirmesi</Typography>
+                  <Typography variant="h6" sx={{ fontWeight: 'bold', color: '#333' }}>Güvenlik Bilgilendirmesi</Typography>
                 </Box>
                 <Stack spacing={3}>
                   <Box sx={{ display: 'flex', alignItems: 'flex-start', gap: 2 }}>
                     <TouchApp sx={{ color: '#dc143c', mt: 0.5 }} />
                     <Typography variant="body2" sx={{ color: '#666', fontSize: '13px' }}>
-                      İlk şifre oluşturma işlemi sadece kayıtlı telefon numaranıza gönderilen OTP kod ile yapılabilir.
+                      Şifre sıfırlama işlemi sadece kayıtlı e-posta adresinize gönderilen kod ile yapılabilir.
                     </Typography>
                   </Box>
                   <Box sx={{ display: 'flex', alignItems: 'flex-start', gap: 2 }}>
                     <Security sx={{ color: '#dc143c', mt: 0.5 }} />
                     <Typography variant="body2" sx={{ color: '#666', fontSize: '13px' }}>
-                      Güvenliğiniz için şifrenizi düzenli olarak değiştiriniz ve FINFLOW personeli dahil kimse ile paylaşmayınız.
+                      Şifrenizi FINFLOW personeli dahil kimse ile paylaşmayınız. Güvenliğiniz için düzenli olarak şifrenizi değiştiriniz.
                     </Typography>
                   </Box>
                 </Stack>
@@ -352,4 +379,4 @@ const InitialPasswordPage = ({ onBackToLogin }) => {
   );
 };
 
-export default InitialPasswordPage;
+export default ForgotPasswordPage;

@@ -2,11 +2,11 @@ import React, { useState, useEffect, useCallback } from 'react';
 import {
   Container, Typography, Box, TextField, Button, FormControl, InputLabel, Select, MenuItem,
   CircularProgress, Alert, InputAdornment, Paper, Card, CardContent, Stepper, Step, StepLabel,
-  Fade, Slide, Avatar, Chip, IconButton, Divider, Stack
+  Fade, Slide, Avatar, Chip,Divider, Stack
 } from '@mui/material';
 import {
   Send as SendIcon, AccountCircle as AccountCircleIcon, AccountBalance as AccountBalanceIcon,
-  Person as PersonIcon, Euro as EuroIcon, Description as DescriptionIcon, SwapHoriz as SwapHorizIcon,
+   Euro as EuroIcon, Description as DescriptionIcon,
   CheckCircle as CheckCircleIcon, Warning as WarningIcon, Info as InfoIcon, Refresh as RefreshIcon
 } from '@mui/icons-material';
 import { styled } from '@mui/material/styles';

@@ -56,7 +56,7 @@ export const login = async (req, res) => {
         const payload = {
             id: customer.customer_id,
             customerNumber: customer.customer_number,
-            role: 'customer',
+            role: 'CUSTOMER',
             fullName: `${customer.first_name} ${customer.last_name}`,
         };
 

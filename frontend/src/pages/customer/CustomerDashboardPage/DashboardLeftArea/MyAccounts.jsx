@@ -136,7 +136,7 @@ const MyAccounts = () => {
   const currentAccount = accounts[currentIndex];
 
   return (
-    <Box sx={{ display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'flex-start', paddingTop: '2rem', width: '40vw', height: '70vh', background: "rgba(255,255,255,0.6)", boxShadow: 3, borderRadius: '20px', padding: '1.5rem', position: 'relative' }}>
+    <Box sx={{ display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'flex-start', paddingTop: '2rem', width: '40vw', height: '100%', background: "rgba(255,255,255,0.6)", boxShadow: 3, borderRadius: '20px', padding: '1.5rem', position: 'relative' }}>
       
       <Box sx={{ display: 'flex', flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', width: '100%', mb: '1.5rem' }}>
         <IconButton onClick={handlePrevious} sx={{ color: '#666', '&:hover': { backgroundColor: 'rgba(0,0,0,0.1)', transform: 'scale(1.1)' }, transition: 'all 0.2s ease' }}>

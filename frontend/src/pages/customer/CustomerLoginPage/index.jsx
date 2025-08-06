@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { Link as RouterLink, useNavigate } from 'react-router-dom';
+import { Link, Link as RouterLink, useNavigate } from 'react-router-dom';
 import {
   Container,
   Box,
@@ -104,7 +104,7 @@ const navigate=useNavigate();
             alignItems: 'center'
           }}>
             {/* FINFLOW Logo */}
-            <Box sx={{ mb: 4, textAlign: 'center' }}>
+            <Box sx={{ mb: 4, textAlign: 'center' }}component={Link} to="/">
               <Box sx={{ 
                 display: 'flex', 
                 alignItems: 'center', 
@@ -209,7 +209,7 @@ const navigate=useNavigate();
                   required
                   fullWidth
                   id="customer_number"
-                  placeholder="T.C. Kimlik / Müşteri Numaranız"
+                  placeholder="Müşteri Numaranız"
                   name="customer_number"
                   autoComplete="username"
                   autoFocus

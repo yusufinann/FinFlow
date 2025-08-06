@@ -114,8 +114,8 @@ const Transactions = () => {
 
   return (
     <Card sx={{
-      width: '40vw', 
-      height: '40vh', 
+      width: '100%', 
+      height: '50vh', 
       borderRadius: '20px',
       boxShadow: 3,
       background: 'rgba(255, 255, 255, 0.7)', 

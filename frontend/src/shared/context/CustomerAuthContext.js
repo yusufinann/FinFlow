@@ -1,4 +1,6 @@
-import React, { createContext, useState, useContext, useEffect, useCallback } from 'react';
+// CustomerAuthProvider.js - DÜZELTİLMİŞ VE STABİL KOD
+
+import React, { createContext, useState, useContext, useEffect, useCallback, useMemo } from 'react';
 import { jwtDecode } from 'jwt-decode';
 import authService from '../../api/customerPanelServices/authService';
 
@@ -42,7 +44,7 @@ export const CustomerAuthProvider = ({ children }) => {
     initializeAuth();
   }, [initializeAuth]);
 
-  const login = async (customer_number, password) => {
+  const login = useCallback(async (customer_number, password) => {
     const response = await authService.login(customer_number, password);
     if (response.success && response.token) {
       sessionStorage.setItem('customerFinToken', response.token);
@@ -50,27 +52,25 @@ export const CustomerAuthProvider = ({ children }) => {
       setToken(response.token);
       console.log('Giriş başarılı, müşteri bilgileri:', decodedCustomer);
       setCustomer(decodedCustomer);
-      return response; // Başarılı response'u geri döndür
+      return response;
     }
     throw new Error(response.message || 'Giriş başarısız.');
-  };
+  }, []); 
 
-  const logout = () => {
+  const logout = useCallback(() => {
     authService.logout();
     sessionStorage.removeItem('customerFinToken');
     setToken(null);
     setCustomer(null);
-    window.location.href = '/customer-login';
-  };
-
-  const value = {
+  }, []); 
+  const value = useMemo(() => ({
     isAuthenticated: !!customer,
     customer,
     token,
     login,
     logout,
     isLoading,
-  };
+  }), [customer, token, isLoading, login, logout]);
 
   return (
     <CustomerAuthContext.Provider value={value}>

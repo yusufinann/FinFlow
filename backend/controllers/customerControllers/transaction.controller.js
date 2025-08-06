@@ -253,3 +253,70 @@ export const createCustomerTransfer = async (req, res) => {
         if (connection) connection.release();
     }
 };
+
+export const getIncomeExpenseSummary = async (req, res) => {
+    const customerId = req.user.id;
+
+    const sql = `
+        SELECT
+            CASE
+                WHEN da.customer_id = ? THEN 'income'
+                ELSE 'expense'
+            END AS transaction_type,
+            COALESCE(t.transaction_category, 'Diğer') AS category,
+            SUM(t.amount) AS total_amount
+        FROM transactions t
+        LEFT JOIN accounts sa ON t.source_account_id = sa.account_id
+        LEFT JOIN accounts da ON t.destination_account_id = da.account_id
+        WHERE (sa.customer_id = ? OR da.customer_id = ?)
+        AND sa.customer_id != da.customer_id
+        AND YEAR(t.created_at) = YEAR(CURDATE())
+        AND MONTH(t.created_at) = MONTH(CURDATE())
+        AND t.currency_code = 'TRY'
+        GROUP BY transaction_type, category
+        ORDER BY total_amount DESC
+    `;
+
+    try {
+        const [rows] = await pool.query(sql, [customerId, customerId, customerId]);
+
+        const income = {
+            total: 0,
+            sources: []
+        };
+        const expense = {
+            total: 0,
+            categories: []
+        };
+
+        rows.forEach(row => {
+            const amount = parseFloat(row.total_amount);
+            if (row.transaction_type === 'income') {
+                income.total += amount;
+                income.sources.push({
+                    source: row.category,
+                    amount: amount
+                });
+            } else {
+                expense.total += amount;
+                expense.categories.push({
+                    category: row.category,
+                    amount: amount
+                });
+            }
+        });
+
+        res.status(200).json({
+            success: true,
+            income,
+            expense
+        });
+
+    } catch (error) {
+        console.error("Error fetching income and expense summary:", error);
+        res.status(500).json({
+            success: false,
+            message: "Gelir ve gider özeti alınırken bir sunucu hatası oluştu."
+        });
+    }
+};

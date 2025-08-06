@@ -33,20 +33,33 @@ export const WebSocketProvider = ({ children, auth, userType }) => {
 
   useEffect(() => {
     if (!(auth && auth.token)) {
-      if (webSocketRef.current) webSocketRef.current.close(1000, 'User logged out');
+      if (webSocketRef.current) {
+        webSocketRef.current.close(1000, 'User logged out');
+      }
       return;
     }
 
     const connect = () => {
+      console.log('[WebSocket] Bağlantı kuruluyor...');
       const ws = new WebSocket(`ws://localhost:3001?token=${auth.token}`);
       webSocketRef.current = ws;
       setConnectionStatus('connecting');
-      ws.onopen = () => setConnectionStatus('connected');
+
+      ws.onopen = () => {
+        console.log('[WebSocket] Bağlantı başarılı (onopen tetiklendi).');
+        setConnectionStatus('connected');
+      };
+
       ws.onmessage = (event) => {
+        console.log('[WebSocket] Sunucudan mesaj alındı:', event.data);
         try {
           const message = JSON.parse(event.data);
           setLastMessage({ ...message, id: Date.now() });
+          
           switch (message.type) {
+            case 'CONNECTION_SUCCESSFUL':
+              console.log('Sunucu bağlantıyı onayladı:', message.payload.message);
+              break;
             case 'INITIAL_PERSONNEL_STATUS':
               setPersonnelStatuses(prev => {
                 const newStatuses = { ...prev };
@@ -59,21 +72,34 @@ export const WebSocketProvider = ({ children, auth, userType }) => {
               break;
             case 'INCOMING_TRANSFER':
             case 'NEW_MESSAGE':
-              if (message.newNotification) fetchNotifications();
+              if (message.newNotification) {
+                fetchNotifications();
+              }
               break;
-            default: break;
+            default:
+              break;
           }
-        } catch (error) { console.error('[WebSocket] Failed to parse message:', error); }
+        } catch (error) {
+          console.error('[WebSocket] Mesaj işlenemedi:', error);
+        }
       };
-      ws.onclose = () => {
+
+      ws.onclose = (event) => {
+        console.log(`[WebSocket] Bağlantı kapandı. Kod: ${event.code}, Sebep: ${event.reason}`);
         setConnectionStatus('disconnected');
         if (webSocketRef.current && webSocketRef.current.readyState !== WebSocket.CLOSED) {
           setTimeout(connect, 5000);
         }
       };
-      ws.onerror = () => { ws.close(); };
+
+      ws.onerror = (error) => {
+        console.error('[WebSocket] Bir hata oluştu:', error);
+        ws.close();
+      };
     };
+
     connect();
+
     return () => {
       if (webSocketRef.current) {
         webSocketRef.current.close(1000, 'Component unmounting');
@@ -83,7 +109,7 @@ export const WebSocketProvider = ({ children, auth, userType }) => {
   }, [auth, fetchNotifications]);
 
   const markAllAsRead = useCallback(async () => {
-    if(userType !== 'customer') return;
+    if (userType !== 'customer') return;
     try {
       await notificationService.markAllAsRead();
       setNotifications(prev => prev.map(n => ({ ...n, is_read: true })));

@@ -21,8 +21,9 @@ import {
   Security 
 } from '@mui/icons-material';
 import { useLoginPage } from '../useLoginPage'; 
+import { Link } from 'react-router-dom';
 
-const LoginPageRightArea = ({ onShowRegister }) => {
+const LoginPageRightArea = ({ onShowRegister,onShowForgotPassword }) => {
   const {
     username,
     setUsername,
@@ -103,7 +104,7 @@ const LoginPageRightArea = ({ onShowRegister }) => {
       }}>
         <Container maxWidth="lg">
           <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-            <Box sx={{ display: 'flex', alignItems: 'center' }}>
+            <Box sx={{ display: 'flex', alignItems: 'center' }} component={Link} to="/">
               <Box sx={{
                 width: 40,
                 height: 40,
@@ -383,7 +384,8 @@ const LoginPageRightArea = ({ onShowRegister }) => {
                          ilk Şifreni belirle
                       </Button>
                       <Button
-                        variant="text"
+                        variant="text"                        
+                          onClick={()=>onShowForgotPassword(true)}
                         sx={{ 
                           color: 'white',
                           fontSize: '12px',

@@ -1,16 +1,10 @@
-
-import { Box, Typography, Chip, Card, CardContent,  } from '@mui/material'
+import { Box, Typography, Chip, Card, CardContent } from '@mui/material'
 import React from 'react'
-import { TrendingUp, } from '@mui/icons-material'
+import { TrendingUp } from '@mui/icons-material'
 
-const Income = () => {
-  const incomeData = [
-    { source: 'Maaş', amount: 15000, color: '#4CAF50' },
-    { source: 'Freelance', amount: 3500, color: '#2196F3' },
-    { source: 'Yatırım', amount: 1200, color: '#FF9800' }
-  ]
-
-  const totalIncome = incomeData.reduce((sum, item) => sum + item.amount, 0)
+const Income = ({ data }) => {
+  const totalIncome = data?.total || 0;
+  const incomeSources = data?.sources || [];
 
   return (
     <Card sx={{
@@ -39,10 +33,10 @@ const Income = () => {
           </Typography>
         </Box>
 
-        <Box sx={{ display: 'flex', flexDirection: 'column', gap: 1 }}>
-          {incomeData.map((item, index) => (
+        <Box sx={{ display: 'flex', flexDirection: 'column', gap: 1, overflowY: 'auto' }}>
+          {incomeSources.map((item, index) => (
             <Box key={index} sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-              <Typography variant="body2" sx={{ opacity: 0.9 }}>
+              <Typography variant="body2" sx={{ opacity: 0.9, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
                 {item.source}
               </Typography>
               <Chip 
@@ -51,7 +45,8 @@ const Income = () => {
                 sx={{ 
                   backgroundColor: 'rgba(255,255,255,0.2)',
                   color: 'white',
-                  fontWeight: 600
+                  fontWeight: 600,
+                  flexShrink: 0
                 }}
               />
             </Box>
@@ -62,4 +57,4 @@ const Income = () => {
   )
 }
 
-export default Income
+export default Income;

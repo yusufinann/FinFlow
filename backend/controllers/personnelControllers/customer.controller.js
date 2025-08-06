@@ -112,7 +112,8 @@ export const getCustomerDetails = async (req, res) => {
     });
   }
 
-  const customerSql = "SELECT * FROM customers WHERE (tckn = ? OR customer_number = ?) AND role = 'CUSTOMER'";
+  // GÜNCELLEME: Banka kaydını (customer_number = '000000') hariç tutmak için koşul eklendi.
+  const customerSql = "SELECT * FROM customers WHERE (tckn = ? OR customer_number = ?) AND role = 'CUSTOMER' AND customer_number != '000000'";
 
   try {
     const [customerRows] = await pool.query(customerSql, [tckn, tckn]);
@@ -198,11 +199,12 @@ export const updateCustomer = async (req, res) => {
 
   let formattedBirthDate = birth_date ? new Date(birth_date).toISOString().split("T")[0] : null;
 
+  // GÜNCELLEME: Banka kaydının güncellenmesini önlemek için koşul eklendi.
   const sql = `
     UPDATE customers 
     SET first_name = ?, last_name = ?, birth_date = ?, gender = ?,
         phone_number = ?, email = ?, address = ?, branch_code = ?, is_active = ?
-    WHERE tckn = ? AND role = 'CUSTOMER'`;
+    WHERE tckn = ? AND role = 'CUSTOMER' AND customer_number != '000000'`;
 
   const values = [
     first_name, last_name, formattedBirthDate, gender, phone_number,
@@ -270,19 +272,11 @@ export const updateCustomer = async (req, res) => {
 };
 
 export const getAllCustomers = async (req, res) => {
-  const sql = "SELECT customer_id, customer_number, tckn, first_name, last_name, email, phone_number, is_active FROM customers WHERE role = 'CUSTOMER' ORDER BY created_at DESC";
+  const sql = "SELECT customer_id, customer_number, tckn, first_name, last_name, email, phone_number, is_active FROM customers WHERE role = 'CUSTOMER' AND customer_number != '000000' ORDER BY created_at DESC";
   const performing_personnel_id = req.user?.id;
 
   try {
     const [rows] = await pool.query(sql);
-    
-    // await logPersonnelActivity({
-    //     personnel_id: performing_personnel_id,
-    //     action_type: 'GET_ALL_CUSTOMERS',
-    //     status: 'SUCCESS',
-    //     entity_type: 'CUSTOMER_LIST',
-    //     details: 'Tüm müşteri listesi görüntülendi.'
-    // });
 
     res.status(200).json({
       success: true,
@@ -290,13 +284,6 @@ export const getAllCustomers = async (req, res) => {
     });
   } catch (error) {
     console.error("Tüm müşteriler sorgulanırken hata:", error);
-    
-    // await logPersonnelActivity({
-    //     personnel_id: performing_personnel_id,
-    //     action_type: 'GET_ALL_CUSTOMERS',
-    //     status: 'FAILURE',
-    //     details: `Hata: ${error.message}`
-    // });
 
     res.status(500).json({
       success: false,
