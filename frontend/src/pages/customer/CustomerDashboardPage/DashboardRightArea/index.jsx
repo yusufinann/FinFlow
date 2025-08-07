@@ -13,7 +13,6 @@ const DashboardRightArea = () => {
     const fetchFinancialSummary = async () => {
       setLoading(true);
       try {
-        // GERÇEK API İSTEĞİ
         const response = await apiClient.get('/transactions/income-expense-summary');
         
         if (response.data.success) {

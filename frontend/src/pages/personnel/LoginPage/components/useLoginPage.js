@@ -1,6 +1,6 @@
 import { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { usePersonnelAuth } from '../../../shared/context/PersonnelAuthContext';
+import { usePersonnelAuth } from '../../../../shared/context/PersonnelAuthContext';
 
 export const useLoginPage = () => {
   const [username, setUsername] = useState('');

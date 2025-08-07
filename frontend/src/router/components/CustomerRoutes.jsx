@@ -8,6 +8,7 @@ const ExchangeRates = lazy(() => import("../../pages/customer/ExchangeRates"));
 const MyAccounts = lazy(() => import("../../pages/customer/CustomerDashboardPage/DashboardLeftArea/MyAccounts"));
 const NotificationsPage = lazy(() => import("../../pages/customer/NotificationsPage"));
 const TransactionPage = lazy(() => import("../../pages/customer/TransactionPage"));
+const CustomerProfile = lazy(() => import("../../pages/customer/CustomerProfile"));
 
 const CustomerRoutes = () => {
   return (
@@ -18,7 +19,8 @@ const CustomerRoutes = () => {
         <Route path="/exchange" element={<ExchangeRates />} />
         <Route path="/notifications" element={<NotificationsPage />} />
         <Route path="/transfer" element={<TransactionPage />} />        
-      <Route path ="/history" element={<TotalSpends/>}/>
+        <Route path ="/history" element={<TotalSpends/>}/>
+        <Route path ="/profile" element={<CustomerProfile/>}/>
       </Route>
     </Routes>
   );

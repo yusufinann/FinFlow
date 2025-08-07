@@ -13,7 +13,7 @@ import {
   StepLabel,
   Paper,
 } from '@mui/material';
-import authService from '../../../../api/authService';
+import authService from '../../api/authService';
 
 const steps = ['Kimlik Doğrulama', 'Şifre Belirleme'];
 

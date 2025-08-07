@@ -67,8 +67,8 @@ export const login = async (req, res) => {
             message: 'Giriş başarılı!',
             token: token,
             customer: {
-                 id: customer.customer_id,
-        customerNumber: customer.customer_number,
+                id: customer.customer_id,
+                customerNumber: customer.customer_number,
                 fullName: `${customer.first_name} ${customer.last_name}`,
             }
         });
@@ -78,6 +78,47 @@ export const login = async (req, res) => {
         res.status(500).json({
             success: false,
             message: 'Sunucu hatası. Lütfen daha sonra tekrar deneyin.'
+        });
+    }
+};
+
+export const getCustomerProfile = async (req, res) => {
+    const customerId = req.user.id; 
+
+    try {
+        const sql = `
+            SELECT 
+                customer_id, 
+                customer_number, 
+                first_name, 
+                last_name, 
+                email, 
+                phone_number, 
+                address,
+                DATE_FORMAT(created_at, '%d-%m-%Y %H:%i') as member_since
+            FROM customers 
+            WHERE customer_id = ? AND is_active = 1
+        `;
+        const [rows] = await pool.query(sql, [customerId]);
+        const profile = rows[0];
+
+        if (!profile) {
+            return res.status(404).json({
+                success: false,
+                message: "Müşteri profili bulunamadı.",
+            });
+        }
+
+        res.status(200).json({
+            success: true,
+            data: profile,
+        });
+
+    } catch (error) {
+        console.error("Error fetching customer profile:", error);
+        res.status(500).json({
+            success: false,
+            message: "Profil bilgileri alınırken bir sunucu hatası oluştu.",
         });
     }
 };

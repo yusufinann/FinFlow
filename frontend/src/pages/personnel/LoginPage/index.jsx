@@ -1,8 +1,8 @@
 import { Box } from '@mui/material';
 import React, { useState } from 'react';
-import LoginPageRightArea from './LoginPageRightArea';
-import InitialPasswordPage from './LoginPageRightArea/PersonnelInitialPasswordPage';
-import ForgotPasswordPage from './LoginPageRightArea/ForgotPasswordPage';
+import InitialPasswordPage from '../../../router/components/PersonnelInitialPasswordPage';
+import ForgotPasswordPage from './components/ForgotPasswordPage';
+import LoginArea from './components/LoginArea';
 
 const PersonnelLoginPage = () => {
   const [isRegisterView, setIsRegisterView] = useState(false);
@@ -36,7 +36,7 @@ const PersonnelLoginPage = () => {
       {isRegisterView ? (
         <InitialPasswordPage onShowLogin={showLoginView} />
       ) : (
-        <LoginPageRightArea 
+        <LoginArea
           onShowRegister={showRegisterView} 
           onShowForgotPassword={showForgotPassword} 
         />

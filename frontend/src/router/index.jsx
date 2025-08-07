@@ -15,7 +15,7 @@ import CustomerRoutes from './components/CustomerRoutes';
 import AdminLayout from '../layouts/AdminLayout';
 import MainAppLayout from '../layouts/MainAppLayout';
 import CustomerLayout from '../layouts/CustomerLayout';
-import PersonnelInitialPasswordPage from '../pages/personnel/LoginPage/LoginPageRightArea/PersonnelInitialPasswordPage';
+import PersonnelInitialPasswordPage from './components/PersonnelInitialPasswordPage';
 
 const CustomerLoginPage = React.lazy(() => import('../pages/customer/CustomerLoginPage/index'));
 const InitialPasswordPage = React.lazy(() => import('../pages/customer/CustomerLoginPage/InitalPasswordPage'));

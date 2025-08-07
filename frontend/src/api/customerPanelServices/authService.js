@@ -49,21 +49,23 @@ const setInitialPassword = async (customer_number, otp, newPassword) => {
     throw new Error('Şifre belirlenirken bir sorun oluştu.');
   }
 };
-export const getAuthHeader = () => {
-  const token = sessionStorage.getItem('customerFinToken');
-  if (token) {
-    return { 
-      'Content-Type': 'application/json',
-      'Authorization': `Bearer ${token}` 
-    };
+
+const getProfile = async () => {
+  try {
+    const response = await apiClient.get(`/auth/profile`);
+ 
+    return await response.data;
+  } catch (error) {
+    console.error("Profil getirme hatası:", error);
+    throw error;
   }
-  return { 'Content-Type': 'application/json' };
 };
 const authService = {
   login,
   logout,
   requestInitialPasswordOTP,
   setInitialPassword,
+  getProfile
 };
 
 export default authService;

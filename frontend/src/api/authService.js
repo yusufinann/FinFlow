@@ -52,11 +52,13 @@ const setInitialPassword = async (username, otp, newPassword) => {
   }
 };
 
+
+
 const authService = {
   login,
   logout,
   setInitialPassword,
-  requestInitialPasswordOTP
+  requestInitialPasswordOTP,
 };
 
 export default authService;

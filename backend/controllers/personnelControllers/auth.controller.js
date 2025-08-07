@@ -106,20 +106,15 @@ export const requestPasswordReset = async (req, res) => {
     const [rows] = await pool.query(sql, [username, tckn, email]);
     const user = rows[0];
 
-    // Kullanıcı bulunamazsa veya bilgiler eşleşmezse, güvenlik için genel bir mesaj döndür.
-    // Bu, hangi bilginin yanlış olduğunu sızdırmayı önler.
     if (!user) {
       return res.status(404).json({ success: false, message: "Girilen bilgilerle eşleşen bir admin hesabı bulunamadı." });
     }
 
-    // 6 haneli rastgele bir kod oluştur
     const resetCode = Math.floor(100000 + Math.random() * 900000).toString();
     const redisKey = `reset_code:admin:${username}`;
 
-    // Kodu Redis'e 3 dakikalık geçerlilik süresiyle kaydet
     await redisClient.set(redisKey, resetCode, 'EX', RESET_CODE_EXPIRATION);
     
-    // E-posta ile kodu gönder
     await sendPasswordResetCode(user.email, resetCode);
 
     res.status(200).json({
@@ -133,9 +128,6 @@ export const requestPasswordReset = async (req, res) => {
   }
 };
 
-/**
- * Adım 2: Kullanıcının girdiği sıfırlama kodunu doğrular.
- */
 export const verifyResetCode = async (req, res) => {
   const { username, resetCode } = req.body;
 
@@ -156,10 +148,8 @@ export const verifyResetCode = async (req, res) => {
       return res.status(400).json({ success: false, message: "Girilen kod hatalı." });
     }
 
-    // Kod doğruysa, kodu Redis'ten silerek tekrar kullanılmasını engelle
     await redisClient.del(redisKey);
 
-    // Kullanıcıya şifresini değiştirmesi için kısa süreli bir token oluştur
     const tempPayload = { username, purpose: 'password-reset' };
     const tempToken = jwt.sign(tempPayload, process.env.JWT_SECRET, { expiresIn: TEMP_TOKEN_EXPIRATION });
 
@@ -175,9 +165,6 @@ export const verifyResetCode = async (req, res) => {
   }
 };
 
-/**
- * Adım 3: Yeni şifreyi ayarlar.
- */
 export const resetPassword = async (req, res) => {
   const { newPassword, resetToken } = req.body;
 
@@ -186,26 +173,21 @@ export const resetPassword = async (req, res) => {
   }
 
   try {
-    // Geçici token'ı doğrula
     const decoded = jwt.verify(resetToken, process.env.JWT_SECRET);
     
-    // Token'ın doğru amaçla oluşturulduğundan emin ol
     if (decoded.purpose !== 'password-reset') {
         return res.status(401).json({ success: false, message: "Geçersiz token." });
     }
 
     const { username } = decoded;
 
-    // Yeni şifreyi hash'le
     const salt = await bcrypt.genSalt(10);
     const hashedPassword = await bcrypt.hash(newPassword, salt);
 
-    // Veritabanında şifreyi güncelle
     const sql = `UPDATE customers SET password_hash = ? WHERE username = ? AND role = 'ADMIN'`;
     const [result] = await pool.query(sql, [hashedPassword, username]);
 
     if (result.affectedRows === 0) {
-      // Bu durum normalde yaşanmamalı ama bir güvenlik katmanı olarak ekleyebiliriz.
       return res.status(404).json({ success: false, message: "Kullanıcı bulunamadı." });
     }
 

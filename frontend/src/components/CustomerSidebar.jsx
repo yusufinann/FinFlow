@@ -39,6 +39,11 @@ const CustomerSidebar = () => {
 
   const handleLogout = () => {
     logout();
+    navigate('/customer/login');
+  };
+
+  const handleProfileNavigation = () => {
+    navigate('/customer/profile');
   };
 
   const drawerContent = (
@@ -101,7 +106,19 @@ const CustomerSidebar = () => {
       <Box sx={{ flexGrow: 1 }} />
       <Box sx={{ p: 2, mt: 'auto' }}>
         <Divider sx={{ mb: 2 }} />
-        <Box sx={{ display: 'flex', alignItems: 'center', gap: 2, mb: 2, p: 1, borderRadius: 1, '&:hover': { bgcolor: 'grey.100' } }}>
+        <Box 
+          onClick={handleProfileNavigation}
+          sx={{ 
+            display: 'flex', 
+            alignItems: 'center', 
+            gap: 2, 
+            mb: 2, 
+            p: 1, 
+            borderRadius: 1, 
+            cursor: 'pointer',
+            '&:hover': { bgcolor: 'grey.100' } 
+          }}
+        >
           <Avatar sx={{ bgcolor: ziraatRed, width: 40, height: 40 }}>
             {customer?.fullName?.[0].toUpperCase()}
           </Avatar>
