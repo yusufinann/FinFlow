@@ -1,4 +1,3 @@
-// === file: src/pages/Login/components/LoginPageRightArea/LoginPageRightArea.js ===
 import React from 'react';
 import { Box, Grid, Container } from '@mui/material';
 import LoginHeader from './LoginHeader';

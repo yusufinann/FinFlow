@@ -20,7 +20,8 @@ import AdbIcon from "@mui/icons-material/Adb";
 import Logout from "@mui/icons-material/Logout";
 import Settings from "@mui/icons-material/Settings";
 import PersonOutline from "@mui/icons-material/PersonOutline";
-
+import { Link as RouterLink } from 'react-router-dom';
+import ChatIcon from '@mui/icons-material/Chat';
 const pages = [
   { name: "Yeni Personel Kaydı", path: "/admin/personnel/new" },
   { name: "Personel Bilgi Sorgulama", path: "/admin/personnels/search" },
@@ -132,6 +133,9 @@ function AdminNavbar() {
               </Button>
             ))}
           </Box>
+          <IconButton component={RouterLink} to="/admin/chat" color="inherit">
+    <ChatIcon />
+</IconButton>
 
           <Box sx={{ flexGrow: 0 }}>
             <Tooltip title="Kullanıcı Menüsü">

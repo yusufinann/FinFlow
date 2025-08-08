@@ -1,5 +1,6 @@
 import React, { createContext, useContext, useEffect, useState, useRef, useCallback, useMemo } from 'react';
 import notificationService from '../../api/customerPanelServices/notificationService';
+import chatService from '../../api/chatService';
 
 const WebSocketContext = createContext(null);
 
@@ -9,12 +10,18 @@ export const WebSocketProvider = ({ children, auth, userType }) => {
   const [notifications, setNotifications] = useState([]);
   const [unreadCount, setUnreadCount] = useState(0);
   const [personnelStatuses, setPersonnelStatuses] = useState({});
-  const [lastMessage, setLastMessage] = useState(null);
   const [connectionStatus, setConnectionStatus] = useState('disconnected');
+  
+  const [chatContacts, setChatContacts] = useState([]);
+  const [messages, setMessages] = useState({});
+  const [unreadMessages, setUnreadMessages] = useState({});
+  
   const webSocketRef = useRef(null);
+  const activeChatIdRef = useRef(null);
 
-  const fetchNotifications = useCallback(async () => {
-    if (userType === 'customer' && auth?.token) {
+  const fetchInitialData = useCallback(async () => {
+    if (!auth?.token) return;
+    if (userType === 'customer') {
       try {
         const data = await notificationService.getMyNotifications();
         if (data.success) {
@@ -24,113 +31,158 @@ export const WebSocketProvider = ({ children, auth, userType }) => {
       } catch (error) {
         console.error("Failed to fetch notifications:", error);
       }
+    } else if (userType === 'admin' || userType === 'personnel') {
+      try {
+        const { data } = await chatService.getContacts();
+        if (data.success) {
+          setChatContacts(data.contacts);
+        }
+      } catch (error) {
+        console.error("Failed to fetch chat contacts:", error);
+      }
     }
   }, [userType, auth?.token]);
 
   useEffect(() => {
-    fetchNotifications();
-  }, [fetchNotifications]);
+    fetchInitialData();
+  }, [fetchInitialData]);
 
   useEffect(() => {
-    if (!(auth && auth.token)) {
-      if (webSocketRef.current) {
-        webSocketRef.current.close(1000, 'User logged out');
-      }
+    if (!auth?.token) {
+      if (webSocketRef.current) webSocketRef.current.close();
       return;
     }
 
     const connect = () => {
-      console.log('[WebSocket] Bağlantı kuruluyor...');
       const ws = new WebSocket(`ws://localhost:3001?token=${auth.token}`);
       webSocketRef.current = ws;
       setConnectionStatus('connecting');
 
-      ws.onopen = () => {
-        console.log('[WebSocket] Bağlantı başarılı (onopen tetiklendi).');
-        setConnectionStatus('connected');
+      ws.onopen = () => setConnectionStatus('connected');
+      
+      ws.onclose = () => setConnectionStatus('disconnected');
+
+      ws.onerror = (error) => {
+        console.error('[WebSocket] Hata:', error);
+        ws.close();
       };
 
       ws.onmessage = (event) => {
-        console.log('[WebSocket] Sunucudan mesaj alındı:', event.data);
-        try {
-          const message = JSON.parse(event.data);
-          setLastMessage({ ...message, id: Date.now() });
-          
-          switch (message.type) {
-            case 'CONNECTION_SUCCESSFUL':
-              console.log('Sunucu bağlantıyı onayladı:', message.payload.message);
-              break;
-            case 'INITIAL_PERSONNEL_STATUS':
-              setPersonnelStatuses(prev => {
-                const newStatuses = { ...prev };
-                message.payload.forEach(p => { newStatuses[p.id] = p.status; });
-                return newStatuses;
-              });
-              break;
-            case 'PERSONNEL_STATUS_UPDATE':
-              setPersonnelStatuses(prev => ({ ...prev, [message.payload.id]: message.payload.status }));
-              break;
-            case 'INCOMING_TRANSFER':
-            case 'NEW_MESSAGE':
-              if (message.newNotification) {
-                fetchNotifications();
-              }
-              break;
-            default:
-              break;
+        const message = JSON.parse(event.data);
+
+        switch (message.type) {
+          case 'INITIAL_PERSONNEL_STATUS':
+            setPersonnelStatuses(prev => {
+              const newStatuses = { ...prev };
+              message.payload.forEach(p => { newStatuses[p.id] = p; });
+              return newStatuses;
+            });
+            break;
+          case 'PERSONNEL_STATUS_UPDATE':
+            setPersonnelStatuses(prev => ({ ...prev, [message.payload.id]: message.payload }));
+            break;
+          case 'INCOMING_TRANSFER':
+          case 'NEW_MESSAGE':
+            if (message.newNotification && userType === 'customer') fetchInitialData();
+            break;
+            
+          // --- BURASI DÜZELTİLDİ ---
+          // Hem göndericinin onayı hem de alıcının yeni mesajı aynı mantıkla çalışır:
+          // Gelen mesajı ilgili sohbet dizisine ekle.
+          case 'MESSAGE_SENT_CONFIRMATION':
+          case 'NEW_CHAT_MESSAGE': {
+            const newMessage = message.payload;
+            // Sohbet partnerinin ID'sini bul (gönderici veya alıcı olabiliriz)
+            const chatPartnerId = newMessage.sender_id === auth.user.id ? newMessage.receiver_id : newMessage.sender_id;
+            
+            // Gelen mesajı messages state'indeki doğru sohbete ekle
+            setMessages(prev => ({
+              ...prev,
+              [chatPartnerId]: [...(prev[chatPartnerId] || []), newMessage],
+            }));
+            
+            // Sadece ALICIYSAN ve mesaj YENİYSE okunmamış sayısını artır/okundu olarak işaretle
+            if (message.type === 'NEW_CHAT_MESSAGE') {
+                if (chatPartnerId !== activeChatIdRef.current) {
+                    setUnreadMessages(prev => ({
+                        ...prev,
+                        [chatPartnerId]: (prev[chatPartnerId] || 0) + 1,
+                    }));
+                } else {
+                    // Sohbet penceresi zaten açıksa, mesajı okundu olarak işaretle
+                    chatService.markMessagesAsRead(chatPartnerId);
+                }
+            }
+            break;
           }
-        } catch (error) {
-          console.error('[WebSocket] Mesaj işlenemedi:', error);
-        }
-      };
+          // --- DÜZELTME BİTTİ ---
 
-      ws.onclose = (event) => {
-        console.log(`[WebSocket] Bağlantı kapandı. Kod: ${event.code}, Sebep: ${event.reason}`);
-        setConnectionStatus('disconnected');
-        if (webSocketRef.current && webSocketRef.current.readyState !== WebSocket.CLOSED) {
-          setTimeout(connect, 5000);
+          case 'MESSAGES_READ': {
+            const { chatPartnerId } = message.payload;
+            setMessages(prev => {
+                const partnerMessages = prev[chatPartnerId] || [];
+                const updatedMessages = partnerMessages.map(msg => 
+                    msg.sender_id === auth.user.id ? { ...msg, is_read: true } : msg
+                );
+                return { ...prev, [chatPartnerId]: updatedMessages };
+            });
+            break;
+          }
+          default:
+            break;
         }
-      };
-
-      ws.onerror = (error) => {
-        console.error('[WebSocket] Bir hata oluştu:', error);
-        ws.close();
       };
     };
-
     connect();
-
     return () => {
       if (webSocketRef.current) {
         webSocketRef.current.close(1000, 'Component unmounting');
         webSocketRef.current = null;
       }
     };
-  }, [auth, fetchNotifications]);
+  }, [auth, userType, fetchInitialData]);
 
-  const markAllAsRead = useCallback(async () => {
-    if (userType !== 'customer') return;
+  const loadChatHistory = useCallback(async (contactId) => {
+    activeChatIdRef.current = contactId;
     try {
-      await notificationService.markAllAsRead();
-      setNotifications(prev => prev.map(n => ({ ...n, is_read: true })));
-      setUnreadCount(0);
-    } catch (error) {
-      console.error("Failed to mark notifications as read:", error);
+        const { data } = await chatService.getChatHistory(contactId);
+        if(data.success) {
+            setMessages(prev => ({ ...prev, [contactId]: data.messages }));
+            if (data.messages.some(m => m.receiver_id === auth.user.id && !m.is_read)) {
+                await chatService.markMessagesAsRead(contactId);
+            }
+            setUnreadMessages(prev => {
+                const newUnread = {...prev};
+                delete newUnread[contactId];
+                return newUnread;
+            });
+        }
+    } catch(error) {
+        console.error("Sohbet geçmişi yüklenemedi", error);
     }
-  }, [userType]);
+  }, [auth?.user?.id]);
+  
+  const sendMessage = useCallback((receiverId, content) => {
+    if (webSocketRef.current && webSocketRef.current.readyState === WebSocket.OPEN) {
+        const payload = {
+            type: 'SEND_CHAT_MESSAGE',
+            payload: { receiverId, content }
+        };
+        webSocketRef.current.send(JSON.stringify(payload));
+    }
+  }, []);
 
   const value = useMemo(() => ({
     connectionStatus,
-    lastMessage,
     notifications,
     unreadCount,
-    markAllAsRead,
     personnelStatuses,
-  }), [connectionStatus, lastMessage, notifications, unreadCount, markAllAsRead, personnelStatuses]);
+    chatContacts,
+    messages,
+    unreadMessages,
+    loadChatHistory,
+    sendMessage,
+  }), [connectionStatus, notifications, unreadCount, personnelStatuses, chatContacts, messages, unreadMessages, loadChatHistory, sendMessage]);
 
-  return (
-    <WebSocketContext.Provider value={value}>
-      {children}
-    </WebSocketContext.Provider>
-  );
+  return <WebSocketContext.Provider value={value}>{children}</WebSocketContext.Provider>;
 };

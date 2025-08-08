@@ -16,7 +16,7 @@ import transactionRoutes from './routes/transaction.routes.js';
 import customerNotificationRoutes from './routes/customerRoutes/notification.routes.js';
 import customerTransactionRoutes from './routes/customerRoutes/transaction.routes.js';
 import adminRoutes from './routes/adminRoutes/personnel.routes.js';
-
+import chatRoutes from './routes/chat.routes.js';
 dotenv.config();
 
 const app = express();
@@ -40,6 +40,7 @@ app.use('/api/customers/transactions', customerTransactionRoutes);
 app.use('/api/customers', customerRoutes); 
 app.use('/api/transactions', transactionRoutes);
 app.use('/api/admin/personnel', adminRoutes);
+app.use('/api/chat', chatRoutes);
 
 const server = http.createServer(app);
 

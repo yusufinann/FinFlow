@@ -55,7 +55,6 @@ export const PersonnelAuthProvider = ({ children }) => {
     setPersonnel(null);
     setToken(null);
   }, []);
-
   const value = useMemo(() => ({
     personnel,
     token,

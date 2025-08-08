@@ -21,6 +21,8 @@ import Logout from "@mui/icons-material/Logout";
 import Settings from "@mui/icons-material/Settings";
 import PersonOutline from "@mui/icons-material/PersonOutline";
 import { usePersonnelAuth } from "../shared/context/PersonnelAuthContext";
+import { Link as RouterLink } from 'react-router-dom';
+import ChatIcon from '@mui/icons-material/Chat';
 
 const pages = [
   { name: "Yeni Müşteri Kaydı", path: "/personnel/customers/new" },
@@ -148,7 +150,9 @@ function Navbar() {
               </Button>
             ))}
           </Box>
-
+<IconButton component={RouterLink} to="/personnel/chat" color="inherit">
+    <ChatIcon />
+</IconButton>
           <Box sx={{ flexGrow: 0 }}>
             <Tooltip title="Kullanıcı Menüsü">
               <Button

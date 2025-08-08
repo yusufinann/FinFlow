@@ -6,6 +6,7 @@ const NewCustomerPage = lazy(() => import("../../pages/personnel/NewCustomerReco
 const AccountingPage = lazy(() => import("../../pages/personnel/AccountingPage"));
 const CustomerSearchPage = lazy(() => import("../../pages/personnel/CustomerSearchPage/index"));
 const PersonnelTransactionPage = lazy(() => import("../../pages/personnel/PersonnelTransactionPage"));
+const ChatPage = lazy(() => import("../../shared/ChatPage"));
 
 const PersonnelRoutes = () => {
   return (
@@ -15,6 +16,7 @@ const PersonnelRoutes = () => {
       <Route path="/accounts" element={<AccountingPage />} />
       <Route path="/customers/search" element={<CustomerSearchPage />} />
       <Route path="/transactions" element={<PersonnelTransactionPage />} />
+      <Route path="/chat" element={<ChatPage />} />
     </Routes>
   );
 };
