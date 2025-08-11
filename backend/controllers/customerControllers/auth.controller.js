@@ -31,7 +31,6 @@ export const login = async (req, res) => {
         const [rows] = await pool.query(sql, [customer_number]);
         const customer = rows[0];
 
-        // GÜNCELLEME BAŞLANGICI: Müşteri var mı ve şifresi ayarlı mı diye kontrol et
         if (!customer || !customer.password_hash) {
             // Hatalı deneme sayısını artırarak kullanıcı enumeration saldırılarını önle
             const newAttempts = await redisClient.incr(attempKey);
@@ -45,7 +44,7 @@ export const login = async (req, res) => {
         }
 
          if (customer.is_active === 0) {
-            return res.status(403).json({ // 403 Forbidden, yetkisi olmayan geçerli bir kullanıcı için daha uygun
+            return res.status(403).json({ 
                 success: false,
                 message: "Hesabınız pasif durumdadır. Hesabınızı aktifleştirmek için lütfen şubenizle iletişime geçin.",
             });

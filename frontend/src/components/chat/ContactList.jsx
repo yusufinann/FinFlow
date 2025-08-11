@@ -37,21 +37,14 @@ const ContactRow = ({ index, style, data }) => {
         selected={isSelected}
         onClick={() => setSelectedContactId(contact.id)}
         sx={(theme) => ({ 
-          borderRadius: 2, 
-          mb: 0.5, 
-          mx: 1, 
-          py: 1.5,
+          borderRadius: 2, mb: 0.5, mx: 1, py: 1.5,
           borderRight: isSelected ? `4px solid ${theme.palette.error.main}` : '4px solid transparent',
           '&.Mui-selected': { 
             bgcolor: alpha(theme.palette.error.main, 0.08), 
             color: theme.palette.error.main, 
-            '&:hover': { 
-              bgcolor: alpha(theme.palette.error.main, 0.12) 
-            } 
+            '&:hover': { bgcolor: alpha(theme.palette.error.main, 0.12) } 
           },
-          '&:hover': { 
-            bgcolor: !isSelected ? alpha(theme.palette.grey[500], 0.08) : undefined
-          }
+          '&:hover': { bgcolor: !isSelected ? alpha(theme.palette.grey[500], 0.08) : undefined }
         })}
       >
         <ListItemAvatar>
@@ -62,7 +55,7 @@ const ContactRow = ({ index, style, data }) => {
             ownerState={{ status: getStatus(contact.id) }}
           >
             <Avatar sx={{ width: 48, height: 48, bgcolor: isSelected ? 'error.main' : 'grey.500', color: 'white', fontWeight: 600 }}>
-              {contact.first_name?.[0]}{contact.last_name?.[0]}
+              {`${contact?.first_name?.[0] || ''}${contact?.last_name?.[0] || ''}`}
             </Avatar>
           </StyledBadge>
         </ListItemAvatar>
@@ -72,23 +65,15 @@ const ContactRow = ({ index, style, data }) => {
               <Typography variant="subtitle1" fontWeight={isSelected || unreadCount > 0 ? 600 : 500} color={isSelected ? 'inherit' : 'text.primary'} noWrap>
                 {contact.first_name} {contact.last_name}
               </Typography>
-              {unreadCount > 0 && (
-                <Badge badgeContent={unreadCount} color="error" />
-              )}
+              {unreadCount > 0 ? <Badge badgeContent={unreadCount} color="error" /> : null}
             </Box>
           }
           secondary={
             <Box sx={{ display: 'flex', alignItems: 'center', gap: 1, mt: 0.5 }}>
-              <Typography variant="caption" color="text.secondary">
-                {contact.role}
-              </Typography>
-              {isOnline && <Typography variant="caption" color="success.main" fontWeight={500}>Aktif</Typography>}
+              <Typography variant="caption" color="text.secondary">{contact.role}</Typography>
+              {isOnline ? <Typography variant="caption" color="success.main" fontWeight={500}>Aktif</Typography> : null}
             </Box>
           }
-          primaryTypographyProps={{
-            color: isSelected ? 'error.main' : 'text.primary',
-            fontWeight: isSelected ? 'fontWeightBold' : 'fontWeightMedium'
-          }}
         />
       </ListItemButton>
     </div>
@@ -102,8 +87,8 @@ const ContactList = ({ selectedContactId, setSelectedContactId }) => {
   const getStatus = (contactId) => personnelStatuses[contactId]?.status || 'offline';
 
   const filteredContacts = chatContacts.filter(contact =>
-    `${contact.first_name} ${contact.last_name}`.toLowerCase().includes(searchTerm.toLowerCase()) ||
-    contact.role.toLowerCase().includes(searchTerm.toLowerCase())
+    `${contact.first_name || ''} ${contact.last_name || ''}`.toLowerCase().includes(searchTerm.toLowerCase()) ||
+    (contact.role || '').toLowerCase().includes(searchTerm.toLowerCase())
   );
 
   const onlineCount = chatContacts.filter(contact => getStatus(contact.id) === 'online').length;
@@ -122,48 +107,29 @@ const ContactList = ({ selectedContactId, setSelectedContactId }) => {
           />
         </Box>
         <TextField
-          fullWidth
-          size="small"
-          placeholder="Kişi ara..."
-          value={searchTerm}
+          fullWidth size="small" placeholder="Kişi ara..." value={searchTerm}
           onChange={(e) => setSearchTerm(e.target.value)}
           InputProps={{ startAdornment: (<InputAdornment position="start"><SearchIcon color="disabled" /></InputAdornment>)}}
-          sx={{ '& .MuiOutlinedInput-root': { borderRadius: 3, bgcolor: 'grey.100', border: 'none', '& fieldset': { border: 'none' }, '&:hover fieldset': { border: 'none' }, '&.Mui-focused fieldset': { border: '2px solid', borderColor: 'error.main', bgcolor: 'background.paper' }}}}
+          sx={{ '& .MuiOutlinedInput-root': { borderRadius: 3, bgcolor: 'grey.100', '& fieldset': { border: 'none' }, '&.Mui-focused': { border: '2px solid', borderColor: 'error.main', bgcolor: 'background.paper' }}}}
         />
       </Box>
-
       <Divider />
-      
       <Box sx={{ flexGrow: 1, overflowY: 'auto' }}>
         <AutoSizer>
           {({ height, width }) => (
             <List
-              height={height}
-              width={width}
-              itemSize={84}
-              itemCount={filteredContacts.length}
-              itemData={{
-                contacts: filteredContacts,
-                selectedContactId,
-                setSelectedContactId,
-                getStatus,
-                unreadMessages,
-              }}
+              height={height} width={width} itemSize={84} itemCount={filteredContacts.length}
+              itemData={{ contacts: filteredContacts, selectedContactId, setSelectedContactId, getStatus, unreadMessages }}
               overscanCount={5}
-            >
-              {ContactRow}
-            </List>
+            >{ContactRow}</List>
           )}
         </AutoSizer>
       </Box>
-      
-      {filteredContacts.length === 0 && (
+      {filteredContacts.length === 0 ? (
         <Box sx={{ p: 4, textAlign: 'center' }}>
-          <Typography variant="body2" color="text.secondary">
-            Arama kriterlerinize uygun kişi bulunamadı.
-          </Typography>
+          <Typography variant="body2" color="text.secondary">Arama kriterlerinize uygun kişi bulunamadı.</Typography>
         </Box>
-      )}
+      ) : null}
     </Box>
   );
 };

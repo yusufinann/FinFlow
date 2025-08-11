@@ -257,7 +257,7 @@ const InitialPasswordPage = ({ onBackToLogin }) => {
               <Box sx={{ width: 60, height: 60, border: '2px solid #ddd', borderRadius: '50%', display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center' }}>
                 <Typography sx={{ fontSize: '10px', fontWeight: 'bold' }}>0850</Typography>
                 <Typography sx={{ fontSize: '10px', fontWeight: 'bold' }}>220</Typography>
-                <Typography sx={{ fontSize: '10px', fontWeight: 'bold' }}>00 00</Typography>
+                <Typography sx={{ fontSize: '10px', fontWeight: 'bold' }}>00 01</Typography>
               </Box>
               <Box sx={{ textAlign: 'left' }}>
                 <Typography sx={{ fontSize: '12px', fontWeight: 'bold' }}>Müşteri İletişim</Typography>

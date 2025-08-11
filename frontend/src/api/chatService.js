@@ -5,8 +5,8 @@ const chatService = {
     return apiClient.get('/chat/contacts');
   },
   
-  getChatHistory: (contactId) => {
-    return apiClient.get(`/chat/history/${contactId}`);
+  getChatHistory: (contactId, page = 1) => {
+    return apiClient.get(`/chat/history/${contactId}?page=${page}`);
   },
 
   markMessagesAsRead: (senderId) => {

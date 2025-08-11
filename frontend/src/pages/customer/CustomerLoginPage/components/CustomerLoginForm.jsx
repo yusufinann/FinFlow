@@ -58,7 +58,7 @@ const CustomerLoginForm = ({
       <Box sx={{ mb: 4, textAlign: 'center' }} component={Link} to="/" style={{ textDecoration: 'none' }}>
         <Box sx={{ display: 'flex', alignItems: 'center', justifyContent: 'center', mb: 2 }}>
           <Box sx={{ width: 40, height: 40, backgroundColor: 'white', borderRadius: 1, display: 'flex', alignItems: 'center', justifyContent: 'center', mr: 2 }}>
-            <Typography sx={{ color: '#dc143c', fontSize: '24px', fontWeight: 'bold' }}>Z</Typography>
+            <Typography sx={{ color: '#dc143c', fontSize: '24px', fontWeight: 'bold' }}>F</Typography>
           </Box>
           <Typography variant="h4" sx={{ color: 'white', fontWeight: 'bold', fontSize: '28px' }}>
             FINFLOW

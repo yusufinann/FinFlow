@@ -46,7 +46,7 @@ export const requestInitialPasswordOTP = async (req, res) => {
 
     await redisClient.set(redisKey, otp, { EX: OTP_EXPIRATION_SECONDS });
 
-    // Gerçek bir uygulamada bu OTP, SMS servis sağlayıcısı aracılığıyla gönderilir.
+   
     console.log(`--- İLK ŞİFRE OLUŞTURMA OTP SİMÜLASYONU ---`);
     console.log(`-> Müşteri No: ${customer_number}`);
     console.log(`-> Telefon No: ${customer.phone_number}`);
@@ -115,7 +115,7 @@ export const setInitialPassword = async (req, res) => {
     );
 
     if (result.affectedRows === 0) {
-      // Bu durumun normalde yaşanmaması gerekir ama bir güvenlik önlemidir.
+     
       return res.status(404).json({
         success: false,
         message: "Şifresi güncellenecek müşteri bulunamadı.",

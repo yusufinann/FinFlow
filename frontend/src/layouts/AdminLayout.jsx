@@ -23,13 +23,13 @@ const AdminLayout = () => {
           flexGrow: 1, 
           display: 'flex',
           flexDirection: 'column',
-          pt: '64px' // Navbar'ın yüksekliği kadar boşluk bırakmak iyi bir pratiktir.
+          p:2
         }}
       >
         <Box
           sx={{
             flexGrow: 1,
-            mx: { xs: 2, sm: 4, md: 10 }, // Margin left ve right birleştirildi
+            mx: { xs: 2, sm: 4, md: 10 }, 
           }}
         >
           <Outlet />

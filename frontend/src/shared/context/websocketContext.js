@@ -15,6 +15,8 @@ export const WebSocketProvider = ({ children, auth, userType }) => {
   const [messages, setMessages] = useState({});
   const [unreadMessages, setUnreadMessages] = useState({});
   const [lastMessage, setLastMessage] = useState(null);
+  const [chatPagination, setChatPagination] = useState({});
+  const [isLoadingMore, setIsLoadingMore] = useState(false);
 
   const webSocketRef = useRef(null);
   const activeChatIdRef = useRef(null);
@@ -26,9 +28,12 @@ export const WebSocketProvider = ({ children, auth, userType }) => {
     if (userType === 'customer') {
       try {
         const data = await notificationService.getMyNotifications();
-        if (data.success) {
+        
+        if (data && data.success) {
           setNotifications(data.notifications);
           setUnreadCount(data.unreadCount);
+        } else {
+            console.warn("Bildirimler alınamadı veya yanıt formatı hatalı:", data);
         }
       } catch (error) {
         console.error("Failed to fetch notifications:", error);
@@ -36,7 +41,7 @@ export const WebSocketProvider = ({ children, auth, userType }) => {
     } else if (userType === 'admin' || userType === 'personnel') {
       try {
         const { data } = await chatService.getContacts();
-        if (data.success) {
+        if (data && data.success) {
           setChatContacts(data.contacts);
         }
       } catch (error) {
@@ -50,12 +55,8 @@ export const WebSocketProvider = ({ children, auth, userType }) => {
   }, [fetchInitialData]);
 
   const connect = useCallback(() => {
-    if (webSocketRef.current && webSocketRef.current.readyState !== WebSocket.CLOSED) {
-      return;
-    }
-    if (!auth?.token) {
-      return;
-    }
+    if (webSocketRef.current && webSocketRef.current.readyState !== WebSocket.CLOSED) return;
+    if (!auth?.token) return;
 
     const ws = new WebSocket(`ws://localhost:3001?token=${auth.token}`);
     webSocketRef.current = ws;
@@ -142,24 +143,33 @@ export const WebSocketProvider = ({ children, auth, userType }) => {
 
   useEffect(() => {
     connect();
-
     return () => {
-      if (reconnectTimeoutRef.current) {
-        clearTimeout(reconnectTimeoutRef.current);
-      }
-      if (webSocketRef.current) {
-        webSocketRef.current.close(1000, 'Component unmounting');
-      }
+      if (reconnectTimeoutRef.current) clearTimeout(reconnectTimeoutRef.current);
+      if (webSocketRef.current) webSocketRef.current.close(1000, 'Component unmounting');
     };
   }, [connect]);
 
-
-  const loadChatHistory = useCallback(async (contactId) => {
+  const openChat = useCallback(async (contactId) => {
     activeChatIdRef.current = contactId;
+    if (messages[contactId]) {
+      if (unreadMessages[contactId] > 0) {
+        await chatService.markMessagesAsRead(contactId);
+        setUnreadMessages(prev => {
+          const newUnread = { ...prev };
+          delete newUnread[contactId];
+          return newUnread;
+        });
+      }
+      return;
+    }
+
     try {
-      const { data } = await chatService.getChatHistory(contactId);
+      const { data } = await chatService.getChatHistory(contactId, 1);
       if (data.success) {
-        setMessages(prev => ({ ...prev, [contactId]: data.messages }));
+        const chronologicalMessages = data.messages.reverse();
+        setMessages(prev => ({ ...prev, [contactId]: chronologicalMessages }));
+        setChatPagination(prev => ({ ...prev, [contactId]: data.pagination }));
+        
         if (data.messages.some(m => m.receiver_id === auth.user.id && !m.is_read)) {
           await chatService.markMessagesAsRead(contactId);
         }
@@ -172,34 +182,57 @@ export const WebSocketProvider = ({ children, auth, userType }) => {
     } catch (error) {
       console.error("Sohbet geçmişi yüklenemedi", error);
     }
-  }, [auth?.user?.id]);
+  }, [auth?.user?.id, messages, unreadMessages]);
+
+  const loadMoreMessages = useCallback(async (contactId) => {
+    const pagination = chatPagination[contactId];
+    if (isLoadingMore || !pagination || !pagination.hasNextPage) return;
+
+    setIsLoadingMore(true);
+    const SIMULATION_DELAY = 1000;
+
+    try {
+      const nextPage = pagination.currentPage + 1;
+      
+      const apiCallPromise = chatService.getChatHistory(contactId, nextPage);
+      const timerPromise = new Promise(resolve => setTimeout(resolve, SIMULATION_DELAY));
+
+      const [apiResponse] = await Promise.all([apiCallPromise, timerPromise]);
+      const { data } = apiResponse;
+      
+      if (data.success && data.messages.length > 0) {
+        const chronologicalNewMessages = data.messages.reverse();
+        setMessages(prev => ({
+          ...prev,
+          [contactId]: [...chronologicalNewMessages, ...prev[contactId]],
+        }));
+        setChatPagination(prev => ({ ...prev, [contactId]: data.pagination }));
+      }
+    } catch (error) {
+      console.error("Daha fazla mesaj yüklenirken hata:", error);
+    } finally {
+      setIsLoadingMore(false);
+    }
+  }, [chatPagination, isLoadingMore]);
 
   const sendMessage = useCallback((receiverId, content) => {
     if (webSocketRef.current && webSocketRef.current.readyState === WebSocket.OPEN) {
-      const payload = {
-        type: 'SEND_CHAT_MESSAGE',
-        payload: { receiverId, content }
-      };
+      const payload = { type: 'SEND_CHAT_MESSAGE', payload: { receiverId, content } };
       webSocketRef.current.send(JSON.stringify(payload));
     }
   }, []);
 
-   const markAllAsRead = useCallback(async () => {
-    // Sadece okunmamış bildirim varsa API isteği yap
+  const markAllAsRead = useCallback(async () => {
     if (unreadCount > 0) {
       try {
         await notificationService.markAllAsRead();
-        // API isteği başarılı olduktan sonra state'i manuel olarak güncelle
-        // Bu, anında UI yansıması sağlar.
-        setNotifications(prev => 
-          prev.map(n => ({ ...n, is_read: true }))
-        );
+        setNotifications(prev => prev.map(n => ({ ...n, is_read: true })));
         setUnreadCount(0);
       } catch (error) {
         console.error("Failed to mark notifications as read:", error);
       }
     }
-  }, [unreadCount]); // unreadCount'a bağımlı
+  }, [unreadCount]);
 
   const value = useMemo(() => ({
     connectionStatus,
@@ -210,11 +243,14 @@ export const WebSocketProvider = ({ children, auth, userType }) => {
     messages,
     unreadMessages,
     lastMessage,
-    loadChatHistory,
+    chatPagination,
+    isLoadingMore,
+    openChat,
+    loadMoreMessages,
     sendMessage,
     markAllAsRead,
     fetchInitialData
-  }), [connectionStatus, notifications,markAllAsRead,fetchInitialData, unreadCount, personnelStatuses, chatContacts, messages, unreadMessages, lastMessage, loadChatHistory, sendMessage]);
+  }), [connectionStatus, notifications, unreadCount, personnelStatuses, chatContacts, messages, unreadMessages, lastMessage, chatPagination, isLoadingMore, openChat, loadMoreMessages, sendMessage, markAllAsRead, fetchInitialData]);
 
   return <WebSocketContext.Provider value={value}>{children}</WebSocketContext.Provider>;
 };

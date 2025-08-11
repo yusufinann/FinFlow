@@ -9,7 +9,7 @@ const ChatPage = () => {
   const isMobile = useMediaQuery(theme.breakpoints.down('md'));
 
   return (
-    <Box sx={{ height: 'calc(100vh - 110px)', mt: 2 }}>
+    <Box sx={{ height: 'calc(100vh - 150px)',mt:1 }}>
       <Paper 
         elevation={0} 
         sx={{ 
