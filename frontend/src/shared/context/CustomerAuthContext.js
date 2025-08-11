@@ -48,7 +48,6 @@ export const CustomerAuthProvider = ({ children }) => {
       sessionStorage.setItem('customerFinToken', response.token);
       const decodedCustomer = jwtDecode(response.token);
       setToken(response.token);
-      console.log('Giriş başarılı, müşteri bilgileri:', decodedCustomer);
       setCustomer(decodedCustomer);
 
       // "Beni Hatırla" seçili ise kullanıcı bilgilerini localStorage'a kaydet

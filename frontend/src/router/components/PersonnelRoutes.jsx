@@ -1,5 +1,6 @@
 import React, { lazy } from "react";
 import { Routes, Route } from "react-router-dom";
+import ProfilePage from "../../pages/personnel/ProfilePage/ProfilePage";
 
 const HomePage = lazy(() => import("../../pages/personnel/HomePage/index"));
 const NewCustomerPage = lazy(() => import("../../pages/personnel/NewCustomerRecord"));
@@ -17,6 +18,7 @@ const PersonnelRoutes = () => {
       <Route path="/customers/search" element={<CustomerSearchPage />} />
       <Route path="/transactions" element={<PersonnelTransactionPage />} />
       <Route path="/chat" element={<ChatPage />} />
+       <Route path="/profile" element={<ProfilePage />} />
     </Routes>
   );
 };

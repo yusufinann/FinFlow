@@ -1,7 +1,9 @@
-import { Box, Button, Card, CardContent, CircularProgress, Divider, Grid, TextField, Typography } from "@mui/material";
+import { Box, Button, Card, CardContent, CircularProgress, Divider, Grid, TextField, Typography, Chip } from "@mui/material";
 import EditIcon from '@mui/icons-material/Edit';
 import SaveIcon from '@mui/icons-material/Save';
 import CancelIcon from '@mui/icons-material/Cancel';
+import ToggleOnIcon from '@mui/icons-material/ToggleOn';
+import ToggleOffIcon from '@mui/icons-material/ToggleOff';
 
 const CustomerResultCard = ({
   customer,
@@ -11,6 +13,8 @@ const CustomerResultCard = ({
   onFieldChange,
   editableCustomer,
   isUpdating,
+  onToggleStatus,
+  isTogglingStatus
 }) => {
   const formatDate = (dateString) => {
     if (!dateString) return '';
@@ -42,9 +46,21 @@ const CustomerResultCard = ({
                 </Button>
               </>
             ) : (
-              <Button variant="contained" startIcon={<EditIcon />} onClick={onEditToggle}>
-                Düzenle
-              </Button>
+              <>
+                <Button
+                  variant="outlined"
+                  color={customer.is_active ? 'error' : 'success'}
+                  startIcon={isTogglingStatus ? <CircularProgress size={20} color="inherit" /> : (customer.is_active ? <ToggleOffIcon /> : <ToggleOnIcon />)}
+                  onClick={onToggleStatus}
+                  disabled={isTogglingStatus}
+                  sx={{ mr: 1 }}
+                >
+                  {customer.is_active ? 'Pasifleştir' : 'Aktifleştir'}
+                </Button>
+                <Button variant="contained" startIcon={<EditIcon />} onClick={onEditToggle}>
+                  Düzenle
+                </Button>
+              </>
             )}
           </Box>
         </Box>
@@ -67,6 +83,7 @@ const CustomerResultCard = ({
               <Grid item xs={12} sm={6}><Typography color="text.secondary" variant="caption">Cinsiyet</Typography><Typography variant="body1">{customer.gender === 'E' ? 'Erkek' : 'Kadın'}</Typography></Grid>
               <Grid item xs={12} sm={6}><Typography color="text.secondary" variant="caption">Telefon</Typography><Typography variant="body1">{customer.phone_number || 'N/A'}</Typography></Grid>
               <Grid item xs={12} sm={6}><Typography color="text.secondary" variant="caption">E-posta</Typography><Typography variant="body1">{customer.email || 'N/A'}</Typography></Grid>
+              <Grid item xs={12} sm={6}><Typography color="text.secondary" variant="caption">Durum</Typography><Chip label={customer.is_active ? 'Aktif' : 'Pasif'} color={customer.is_active ? 'success' : 'error'} size="small" /></Grid>
             </>
           )}
         </Grid>

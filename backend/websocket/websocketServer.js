@@ -1,10 +1,9 @@
 import { WebSocketServer, WebSocket } from 'ws';
 import pool from '../config/db.js';
 
-
-const connectedUsers = new Map(); 
+const connectedUsers = new Map();
 const customerClients = new Map();
-const personnelStatus = new Map();
+const staffStatus = new Map();
 
 const wss = new WebSocketServer({ noServer: true });
 
@@ -40,7 +39,7 @@ export const broadcastToCustomer = (customerId, data) => {
 wss.on('connection', (ws, request, decodedToken) => {
   const { id, role, name, username } = decodedToken;
   const entityId = String(id);
-  
+
   ws.user = decodedToken;
 
   console.log(`WebSocket | Yeni bağlantı: ID=${entityId}, Rol=${role}`);
@@ -52,17 +51,15 @@ wss.on('connection', (ws, request, decodedToken) => {
     connectedUsers.set(entityId, { ws, user: decodedToken });
     console.log(`WebSocket | ${role} bağlandı: ${name}. Toplam bağlı personel/admin: ${connectedUsers.size}`);
 
-    if (role === 'PERSONNEL') {
-      personnelStatus.set(entityId, { id, name, username, status: 'online' });
-      broadcastToStaff({
-        type: 'PERSONNEL_STATUS_UPDATE',
-        payload: personnelStatus.get(entityId)
-      });
-    }
+    staffStatus.set(entityId, { id, name, username, status: 'online', role });
+    broadcastToStaff({
+      type: 'STAFF_STATUS_UPDATE',
+      payload: staffStatus.get(entityId)
+    });
 
     ws.send(JSON.stringify({
-      type: 'INITIAL_PERSONNEL_STATUS',
-      payload: Array.from(personnelStatus.values())
+      type: 'INITIAL_STAFF_STATUS',
+      payload: Array.from(staffStatus.values())
     }));
 
   } else if (role === 'CUSTOMER') {
@@ -80,7 +77,7 @@ wss.on('connection', (ws, request, decodedToken) => {
       if (data.type === 'SEND_CHAT_MESSAGE') {
         const { receiverId, content } = data.payload;
         const senderId = ws.user.id;
-        
+
         if (!receiverId || !content) return;
 
         const sql = `
@@ -110,16 +107,16 @@ wss.on('connection', (ws, request, decodedToken) => {
     console.log(`WebSocket | Bağlantı kapandı: ID=${entityId}, Rol=${role}`);
     if (role === 'ADMIN' || role === 'PERSONNEL') {
       connectedUsers.delete(entityId);
-      if (role === 'PERSONNEL') {
-        const personnelData = personnelStatus.get(entityId);
-        if (personnelData) {
-            personnelStatus.set(entityId, { ...personnelData, status: 'offline' });
-            broadcastToStaff({
-                type: 'PERSONNEL_STATUS_UPDATE',
-                payload: personnelStatus.get(entityId)
-            });
-        }
+      
+      const staffData = staffStatus.get(entityId);
+      if (staffData) {
+          staffStatus.set(entityId, { ...staffData, status: 'offline' });
+          broadcastToStaff({
+              type: 'STAFF_STATUS_UPDATE',
+              payload: staffStatus.get(entityId)
+          });
       }
+
     } else if (role === 'CUSTOMER') {
       customerClients.delete(entityId);
     }

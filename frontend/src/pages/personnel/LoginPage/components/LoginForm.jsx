@@ -69,7 +69,7 @@ const LoginForm = ({
         <Stack spacing={2}>
           {error && <Alert severity="error">{error}</Alert>}
           <TextField
-            fullWidth required placeholder="Kurumsal Müşteri Numaranız" variant="outlined"
+            fullWidth required placeholder="Kullanıcı Adınız" variant="outlined"
             value={username} onChange={(e) => setUsername(e.target.value)} disabled={loading}
             sx={{
               '& .MuiOutlinedInput-root': {

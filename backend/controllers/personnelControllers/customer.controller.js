@@ -1,5 +1,10 @@
+// personnel/customer.controller.js : 
+
 import pool from "../../config/db.js";
 import { logPersonnelActivity } from "../../utils/activityLogger.js";
+import redisClient from "../../config/redisClient.js"; // EKLENDİ
+
+const OTP_EXPIRATION_SECONDS = 180; // EKLENDİ
 
 const generateUniqueCustomerNumber = async () => {
   let customerNumber;
@@ -112,7 +117,6 @@ export const getCustomerDetails = async (req, res) => {
     });
   }
 
-  // GÜNCELLEME: Banka kaydını (customer_number = '000000') hariç tutmak için koşul eklendi.
   const customerSql = "SELECT * FROM customers WHERE (tckn = ? OR customer_number = ?) AND role = 'CUSTOMER' AND customer_number != '000000'";
 
   try {
@@ -199,7 +203,6 @@ export const updateCustomer = async (req, res) => {
 
   let formattedBirthDate = birth_date ? new Date(birth_date).toISOString().split("T")[0] : null;
 
-  // GÜNCELLEME: Banka kaydının güncellenmesini önlemek için koşul eklendi.
   const sql = `
     UPDATE customers 
     SET first_name = ?, last_name = ?, birth_date = ?, gender = ?,
@@ -273,8 +276,7 @@ export const updateCustomer = async (req, res) => {
 
 export const getAllCustomers = async (req, res) => {
   const sql = "SELECT customer_id, customer_number, tckn, first_name, last_name, email, phone_number, is_active FROM customers WHERE role = 'CUSTOMER' AND customer_number != '000000' ORDER BY created_at DESC";
-  const performing_personnel_id = req.user?.id;
-
+  
   try {
     const [rows] = await pool.query(sql);
 
@@ -290,4 +292,131 @@ export const getAllCustomers = async (req, res) => {
       message: "Sunucu hatası oluştu.",
     });
   }
+};
+
+// --- YENİ EKLENEN FONKSİYONLAR ---
+
+export const requestToggleCustomerStatusOTP = async (req, res) => {
+    const { tckn } = req.params;
+    const performing_personnel_id = req.user?.id;
+
+    if (!tckn) {
+        return res.status(400).json({ success: false, message: "TCKN veya Müşteri Numarası zorunludur." });
+    }
+
+    try {
+        const [rows] = await pool.query("SELECT customer_id FROM customers WHERE (tckn = ? OR customer_number = ?) AND role = 'CUSTOMER' AND customer_number != '000000'", [tckn, tckn]);
+        if (rows.length === 0) {
+            return res.status(404).json({ success: false, message: "Müşteri bulunamadı." });
+        }
+
+        const otp = Math.floor(100000 + Math.random() * 900000).toString();
+        const redisKey = `otp_toggle_customer_status:${tckn}`;
+
+        await redisClient.set(redisKey, otp, { EX: OTP_EXPIRATION_SECONDS });
+
+        await logPersonnelActivity({
+            personnel_id: performing_personnel_id,
+            action_type: 'REQUEST_TOGGLE_CUSTOMER_STATUS',
+            status: 'SUCCESS',
+            entity_type: 'CUSTOMER',
+            entity_identifier: tckn,
+            details: 'Müşteri durumu değişikliği için OTP oluşturuldu.'
+        });
+        
+        console.log(`--- MÜŞTERİ DURUM DEĞİŞİKLİĞİ OTP SİMÜLASYONU (Personel ID: ${performing_personnel_id}) ---`);
+        console.log(`-> Müşteri TCKN/No: ${tckn}`);
+        console.log(`-> ONAY KODU (OTP): ${otp}`);
+        console.log(`---------------------------------------------------------------------------------`);
+
+        res.status(200).json({
+            success: true,
+            message: "Müşteri durumu değişikliği için onay kodu (OTP) oluşturuldu ve 3 dakika geçerlidir."
+        });
+
+    } catch (error) {
+        console.error("Müşteri durum değişikliği için OTP isteme hatası:", error);
+         await logPersonnelActivity({
+            personnel_id: performing_personnel_id,
+            action_type: 'REQUEST_TOGGLE_CUSTOMER_STATUS',
+            status: 'FAILURE',
+            entity_type: 'CUSTOMER',
+            entity_identifier: tckn,
+            details: `Hata: ${error.message}`
+        });
+        res.status(500).json({ success: false, message: "Sunucu hatası oluştu." });
+    }
+};
+
+export const confirmToggleCustomerStatus = async (req, res) => {
+    const { tckn } = req.params;
+    const { otp } = req.body;
+    const performing_personnel_id = req.user?.id;
+
+    if (!tckn || !otp) {
+        return res.status(400).json({ success: false, message: "TCKN/Müşteri Numarası ve OTP zorunludur." });
+    }
+
+    const redisKey = `otp_toggle_customer_status:${tckn}`;
+
+    try {
+        const otpFromRedis = await redisClient.get(redisKey);
+
+        if (!otpFromRedis) {
+            return res.status(400).json({ success: false, message: "Onay kodunun süresi dolmuş. Lütfen işlemi yeniden başlatın." });
+        }
+
+        if (otpFromRedis !== otp) {
+             await logPersonnelActivity({
+                personnel_id: performing_personnel_id,
+                action_type: 'CONFIRM_TOGGLE_CUSTOMER_STATUS',
+                status: 'FAILURE',
+                entity_type: 'CUSTOMER',
+                entity_identifier: tckn,
+                details: 'Geçersiz OTP girildi.'
+            });
+            return res.status(400).json({ success: false, message: "Girdiğiniz onay kodu hatalı." });
+        }
+
+        const [customerRows] = await pool.query("SELECT is_active FROM customers WHERE (tckn = ? OR customer_number = ?) AND role = 'CUSTOMER' AND customer_number != '000000'", [tckn, tckn]);
+        if (customerRows.length === 0) {
+             return res.status(404).json({ success: false, message: "Müşteri bulunamadı." });
+        }
+
+        const currentStatus = customerRows[0].is_active;
+        const newStatus = currentStatus === 1 ? 0 : 1;
+
+        await pool.query("UPDATE customers SET is_active = ? WHERE (tckn = ? OR customer_number = ?) AND role = 'CUSTOMER'", [newStatus, tckn, tckn]);
+
+        await redisClient.del(redisKey);
+
+        const message = newStatus === 1 ? "Müşteri başarıyla aktifleştirildi." : "Müşteri başarıyla pasifleştirildi.";
+        
+        await logPersonnelActivity({
+            personnel_id: performing_personnel_id,
+            action_type: 'CONFIRM_TOGGLE_CUSTOMER_STATUS',
+            status: 'SUCCESS',
+            entity_type: 'CUSTOMER',
+            entity_identifier: tckn,
+            details: message
+        });
+
+        res.status(200).json({
+            success: true,
+            message: message,
+            data: { tckn: tckn, is_active: newStatus }
+        });
+
+    } catch (error) {
+        console.error("Müşteri durumu onaylama hatası:", error);
+        await logPersonnelActivity({
+            personnel_id: performing_personnel_id,
+            action_type: 'CONFIRM_TOGGLE_CUSTOMER_STATUS',
+            status: 'FAILURE',
+            entity_type: 'CUSTOMER',
+            entity_identifier: tckn,
+            details: `Hata: ${error.message}`
+        });
+        res.status(500).json({ success: false, message: "Sunucu hatası oluştu." });
+    }
 };

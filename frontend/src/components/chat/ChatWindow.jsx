@@ -33,7 +33,7 @@ const MessageRow = React.memo(({ index, style, data }) => {
   const rowRef = useRef(null);
   useEffect(() => {
     if (rowRef.current) {
-      const newSize = rowRef.current.getBoundingClientRect().height;
+      const newSize = rowRef.current.offsetHeight;
       setSize(index, newSize);
     }
   }, [setSize, index, rowRef]);
@@ -67,8 +67,8 @@ const MessageRow = React.memo(({ index, style, data }) => {
             sx={{
               p: 2,
               borderRadius: isOwnMessage ? '20px 20px 8px 20px' : '20px 20px 20px 8px',
-             bgcolor: isOwnMessage ? '#dcf8c6' : 'background.paper', 
-    color: 'text.primary', 
+              bgcolor: isOwnMessage ? '#dcf8c6' : 'background.paper', 
+              color: 'text.primary', 
               maxWidth: '75%',
               minWidth: '80px',
               position: 'relative'
@@ -82,7 +82,7 @@ const MessageRow = React.memo(({ index, style, data }) => {
                 {new Date(msg.created_at).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
               </Typography>
               {isOwnMessage && (
-                <DoneAllIcon sx={{ fontSize: 16, color: msg.is_read ? 'info.light' : 'rgba(255,255,255,0.5)' }}/>
+                <DoneAllIcon sx={{ fontSize: 16, color: msg.is_read ? 'error.main' : 'text.disabled' }}/>
               )}
             </Box>
           </Paper>
@@ -149,7 +149,7 @@ const ChatWindow = ({ contactId, onBack, showBackButton }) => {
   if (!contactId) {
     return (
       <Box sx={{ display: 'flex', alignItems: 'center', justifyContent: 'center', height: '100%', flexDirection: 'column', gap: 2 }}>
-        <Box sx={{ width: 120, height: 120, borderRadius: '50%', bgcolor: 'primary.main', display: 'flex', alignItems: 'center', justifyContent: 'center', opacity: 0.1 }}>
+        <Box sx={{ width: 120, height: 120, borderRadius: '50%', bgcolor: 'error.main', display: 'flex', alignItems: 'center', justifyContent: 'center', opacity: 0.1 }}>
           <SendIcon sx={{ fontSize: 60 }} />
         </Box>
         <Typography variant="h5" color="text.secondary" fontWeight={300}>Mesajlaşmaya başlayın</Typography>
@@ -200,7 +200,7 @@ const ChatWindow = ({ contactId, onBack, showBackButton }) => {
 
       <Paper component="form" onSubmit={handleSend} elevation={0} sx={{ p: 2, borderTop: 1, borderColor: 'divider', bgcolor: 'background.paper' }}>
         <Box sx={{ display: 'flex', alignItems: 'flex-end', gap: 1 }}>
-          <IconButton size="small" color="primary"><AttachFileIcon /></IconButton>
+          <IconButton size="small" color="error"><AttachFileIcon /></IconButton>
           <TextField
             fullWidth
             multiline
@@ -211,16 +211,26 @@ const ChatWindow = ({ contactId, onBack, showBackButton }) => {
             value={newMessage}
             onChange={(e) => setNewMessage(e.target.value)}
             autoComplete="off"
-            sx={{ '& .MuiOutlinedInput-root': { borderRadius: 3, bgcolor: 'grey.100', border: 'none', '& fieldset': { border: 'none' }, '&:hover fieldset': { border: 'none' }, '&.Mui-focused fieldset': { border: '2px solid', borderColor: 'primary.main' }}}}
+            sx={{ '& .MuiOutlinedInput-root': { borderRadius: 3, bgcolor: 'grey.100', border: 'none', '& fieldset': { border: 'none' }, '&:hover fieldset': { border: 'none' }, '&.Mui-focused fieldset': { border: '2px solid', borderColor: 'error.main' }}}}
             InputProps={{ endAdornment: (<InputAdornment position="end"><IconButton size="small"><EmojiIcon /></IconButton></InputAdornment>)}}
             onKeyPress={(e) => { if (e.key === 'Enter' && !e.shiftKey) { e.preventDefault(); handleSend(e); }}}
           />
           <Tooltip title="Gönder">
             <IconButton 
               type="submit" 
-              color="primary"
+              color="error"
               disabled={!newMessage.trim()}
-              sx={{ bgcolor: newMessage.trim() ? 'primary.main' : 'grey.300', color: 'white', '&:hover': { bgcolor: newMessage.trim() ? 'primary.dark' : 'grey.400' }, '&.Mui-disabled': { bgcolor: 'grey.300', color: 'grey.500' }}}
+              sx={{
+                bgcolor: newMessage.trim() ? 'error.main' : 'grey.300',
+                color: 'white',
+                '&:hover': {
+                  bgcolor: newMessage.trim() ? 'error.dark' : 'grey.400'
+                },
+                '&.Mui-disabled': {
+                  bgcolor: 'grey.300',
+                  color: 'grey.500'
+                }
+              }}
             >
               <SendIcon />
             </IconButton>

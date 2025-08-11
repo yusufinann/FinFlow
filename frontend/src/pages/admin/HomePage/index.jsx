@@ -90,7 +90,7 @@ const HomePage = () => {
   const personnelListWithStatus = useMemo(() => {
     return personnels.map(p => ({
       ...p,
-      onlineStatus: personnelStatuses[p.customer_id] || 'offline',
+      onlineStatus: personnelStatuses[p.customer_id]?.status ?? 'offline',
     }));
   }, [personnels, personnelStatuses]);
 

@@ -4,7 +4,7 @@ import {
   Divider, Badge, Box, TextField, InputAdornment, Chip 
 } from '@mui/material';
 import { Search as SearchIcon, Circle as CircleIcon } from '@mui/icons-material';
-import { styled } from '@mui/material/styles';
+import { styled, alpha } from '@mui/material/styles';
 import { FixedSizeList as List } from 'react-window';
 import AutoSizer from 'react-virtualized-auto-sizer';
 import { useWebSocket } from '../../shared/context/websocketContext';
@@ -36,11 +36,23 @@ const ContactRow = ({ index, style, data }) => {
         key={contact.id}
         selected={isSelected}
         onClick={() => setSelectedContactId(contact.id)}
-        sx={{ 
-          borderRadius: 2, mb: 0.5, mx: 1, py: 1.5,
-          '&.Mui-selected': { bgcolor: 'primary.main', color: 'primary.contrastText', '&:hover': { bgcolor: 'primary.dark' } },
-          '&:hover': { bgcolor: isSelected ? 'primary.dark' : 'action.hover' }
-        }}
+        sx={(theme) => ({ 
+          borderRadius: 2, 
+          mb: 0.5, 
+          mx: 1, 
+          py: 1.5,
+          borderRight: isSelected ? `4px solid ${theme.palette.error.main}` : '4px solid transparent',
+          '&.Mui-selected': { 
+            bgcolor: alpha(theme.palette.error.main, 0.08), 
+            color: theme.palette.error.main, 
+            '&:hover': { 
+              bgcolor: alpha(theme.palette.error.main, 0.12) 
+            } 
+          },
+          '&:hover': { 
+            bgcolor: !isSelected ? alpha(theme.palette.grey[500], 0.08) : undefined
+          }
+        })}
       >
         <ListItemAvatar>
           <StyledBadge
@@ -49,7 +61,7 @@ const ContactRow = ({ index, style, data }) => {
             variant="dot"
             ownerState={{ status: getStatus(contact.id) }}
           >
-            <Avatar sx={{ width: 48, height: 48, bgcolor: isSelected ? 'primary.light' : 'primary.main', color: 'white', fontWeight: 600 }}>
+            <Avatar sx={{ width: 48, height: 48, bgcolor: isSelected ? 'error.main' : 'grey.500', color: 'white', fontWeight: 600 }}>
               {contact.first_name?.[0]}{contact.last_name?.[0]}
             </Avatar>
           </StyledBadge>
@@ -57,22 +69,26 @@ const ContactRow = ({ index, style, data }) => {
         <ListItemText
           primary={
             <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-              <Typography variant="subtitle1" fontWeight={unreadCount > 0 ? 600 : 500} color={isSelected ? 'inherit' : 'text.primary'} noWrap>
+              <Typography variant="subtitle1" fontWeight={isSelected || unreadCount > 0 ? 600 : 500} color={isSelected ? 'inherit' : 'text.primary'} noWrap>
                 {contact.first_name} {contact.last_name}
               </Typography>
               {unreadCount > 0 && (
-                <Badge badgeContent={unreadCount} color="error" sx={{ '& .MuiBadge-badge': { bgcolor: isSelected ? 'warning.main' : 'error.main', minWidth: 20, height: 20, fontSize: '0.75rem' }}} />
+                <Badge badgeContent={unreadCount} color="error" />
               )}
             </Box>
           }
           secondary={
             <Box sx={{ display: 'flex', alignItems: 'center', gap: 1, mt: 0.5 }}>
-              <Typography variant="caption" color={isSelected ? 'primary.light' : 'text.secondary'} sx={{ bgcolor: isSelected ? 'rgba(255,255,255,0.2)' : 'grey.100', px: 1, py: 0.2, borderRadius: 1, fontSize: '0.7rem' }}>
+              <Typography variant="caption" color="text.secondary">
                 {contact.role}
               </Typography>
               {isOnline && <Typography variant="caption" color="success.main" fontWeight={500}>Aktif</Typography>}
             </Box>
           }
+          primaryTypographyProps={{
+            color: isSelected ? 'error.main' : 'text.primary',
+            fontWeight: isSelected ? 'fontWeightBold' : 'fontWeightMedium'
+          }}
         />
       </ListItemButton>
     </div>
@@ -112,7 +128,7 @@ const ContactList = ({ selectedContactId, setSelectedContactId }) => {
           value={searchTerm}
           onChange={(e) => setSearchTerm(e.target.value)}
           InputProps={{ startAdornment: (<InputAdornment position="start"><SearchIcon color="disabled" /></InputAdornment>)}}
-          sx={{ '& .MuiOutlinedInput-root': { borderRadius: 3, bgcolor: 'grey.100', border: 'none', '& fieldset': { border: 'none' }, '&:hover fieldset': { border: 'none' }, '&.Mui-focused fieldset': { border: '2px solid', borderColor: 'primary.main', bgcolor: 'background.paper' }}}}
+          sx={{ '& .MuiOutlinedInput-root': { borderRadius: 3, bgcolor: 'grey.100', border: 'none', '& fieldset': { border: 'none' }, '&:hover fieldset': { border: 'none' }, '&.Mui-focused fieldset': { border: '2px solid', borderColor: 'error.main', bgcolor: 'background.paper' }}}}
         />
       </Box>
 

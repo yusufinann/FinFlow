@@ -1,6 +1,5 @@
 import React from 'react';
-import { Card, CardContent, List, Typography, Box, Button } from '@mui/material';
-import AddIcon from '@mui/icons-material/Add';
+import { Card, CardContent, List, Typography, Box} from '@mui/material';
 import AccountListItem from './AccountListItem';
 
 const AccountListCard = ({
@@ -9,7 +8,6 @@ const AccountListCard = ({
   isUpdatingAccount,
   editingAccountId,
   setEditingAccountId,
-  onAddNewAccount, // Yeni bir hesap ekleme fonksiyonu için prop
 }) => (
   <Card sx={{ mt: 3, width: '100%', textAlign: 'left' }}>
     <CardContent>
@@ -17,15 +15,6 @@ const AccountListCard = ({
         <Typography variant="h5" component="div">
           Müşteri Hesapları
         </Typography>
-        <Button
-          variant="contained"
-          size="small"
-          startIcon={<AddIcon />}
-          onClick={onAddNewAccount}
-          sx={{ bgcolor: '#006442', '&:hover': { bgcolor: '#004d33' } }}
-        >
-          Yeni Hesap Ekle
-        </Button>
       </Box>
 
       {accounts && accounts.length > 0 ? (

@@ -11,13 +11,15 @@ export const WebSocketProvider = ({ children, auth, userType }) => {
   const [unreadCount, setUnreadCount] = useState(0);
   const [personnelStatuses, setPersonnelStatuses] = useState({});
   const [connectionStatus, setConnectionStatus] = useState('disconnected');
-  
   const [chatContacts, setChatContacts] = useState([]);
   const [messages, setMessages] = useState({});
   const [unreadMessages, setUnreadMessages] = useState({});
-  
+  const [lastMessage, setLastMessage] = useState(null);
+
   const webSocketRef = useRef(null);
   const activeChatIdRef = useRef(null);
+  const reconnectTimeoutRef = useRef(null);
+  const reconnectAttemptsRef = useRef(0);
 
   const fetchInitialData = useCallback(async () => {
     if (!auth?.token) return;
@@ -47,130 +49,157 @@ export const WebSocketProvider = ({ children, auth, userType }) => {
     fetchInitialData();
   }, [fetchInitialData]);
 
-  useEffect(() => {
+  const connect = useCallback(() => {
+    if (webSocketRef.current && webSocketRef.current.readyState !== WebSocket.CLOSED) {
+      return;
+    }
     if (!auth?.token) {
-      if (webSocketRef.current) webSocketRef.current.close();
       return;
     }
 
-    const connect = () => {
-      const ws = new WebSocket(`ws://localhost:3001?token=${auth.token}`);
-      webSocketRef.current = ws;
-      setConnectionStatus('connecting');
+    const ws = new WebSocket(`ws://localhost:3001?token=${auth.token}`);
+    webSocketRef.current = ws;
+    setConnectionStatus('connecting');
 
-      ws.onopen = () => setConnectionStatus('connected');
-      
-      ws.onclose = () => setConnectionStatus('disconnected');
-
-      ws.onerror = (error) => {
-        console.error('[WebSocket] Hata:', error);
-        ws.close();
-      };
-
-      ws.onmessage = (event) => {
-        const message = JSON.parse(event.data);
-
-        switch (message.type) {
-          case 'INITIAL_PERSONNEL_STATUS':
-            setPersonnelStatuses(prev => {
-              const newStatuses = { ...prev };
-              message.payload.forEach(p => { newStatuses[p.id] = p; });
-              return newStatuses;
-            });
-            break;
-          case 'PERSONNEL_STATUS_UPDATE':
-            setPersonnelStatuses(prev => ({ ...prev, [message.payload.id]: message.payload }));
-            break;
-          case 'INCOMING_TRANSFER':
-          case 'NEW_MESSAGE':
-            if (message.newNotification && userType === 'customer') fetchInitialData();
-            break;
-            
-          // --- BURASI DÜZELTİLDİ ---
-          // Hem göndericinin onayı hem de alıcının yeni mesajı aynı mantıkla çalışır:
-          // Gelen mesajı ilgili sohbet dizisine ekle.
-          case 'MESSAGE_SENT_CONFIRMATION':
-          case 'NEW_CHAT_MESSAGE': {
-            const newMessage = message.payload;
-            // Sohbet partnerinin ID'sini bul (gönderici veya alıcı olabiliriz)
-            const chatPartnerId = newMessage.sender_id === auth.user.id ? newMessage.receiver_id : newMessage.sender_id;
-            
-            // Gelen mesajı messages state'indeki doğru sohbete ekle
-            setMessages(prev => ({
-              ...prev,
-              [chatPartnerId]: [...(prev[chatPartnerId] || []), newMessage],
-            }));
-            
-            // Sadece ALICIYSAN ve mesaj YENİYSE okunmamış sayısını artır/okundu olarak işaretle
-            if (message.type === 'NEW_CHAT_MESSAGE') {
-                if (chatPartnerId !== activeChatIdRef.current) {
-                    setUnreadMessages(prev => ({
-                        ...prev,
-                        [chatPartnerId]: (prev[chatPartnerId] || 0) + 1,
-                    }));
-                } else {
-                    // Sohbet penceresi zaten açıksa, mesajı okundu olarak işaretle
-                    chatService.markMessagesAsRead(chatPartnerId);
-                }
-            }
-            break;
-          }
-          // --- DÜZELTME BİTTİ ---
-
-          case 'MESSAGES_READ': {
-            const { chatPartnerId } = message.payload;
-            setMessages(prev => {
-                const partnerMessages = prev[chatPartnerId] || [];
-                const updatedMessages = partnerMessages.map(msg => 
-                    msg.sender_id === auth.user.id ? { ...msg, is_read: true } : msg
-                );
-                return { ...prev, [chatPartnerId]: updatedMessages };
-            });
-            break;
-          }
-          default:
-            break;
-        }
-      };
+    ws.onopen = () => {
+      setConnectionStatus('connected');
+      reconnectAttemptsRef.current = 0;
+      if (reconnectTimeoutRef.current) {
+        clearTimeout(reconnectTimeoutRef.current);
+        reconnectTimeoutRef.current = null;
+      }
     };
-    connect();
-    return () => {
-      if (webSocketRef.current) {
-        webSocketRef.current.close(1000, 'Component unmounting');
-        webSocketRef.current = null;
+
+    ws.onclose = (event) => {
+      setConnectionStatus('disconnected');
+      if (event.code !== 1000) {
+        const delay = Math.min(1000 * (2 ** reconnectAttemptsRef.current), 30000);
+        reconnectAttemptsRef.current += 1;
+        reconnectTimeoutRef.current = setTimeout(connect, delay);
+      }
+    };
+
+    ws.onerror = (error) => {
+      console.error('[WebSocket] Hata:', error);
+      ws.close();
+    };
+
+    ws.onmessage = (event) => {
+      const message = JSON.parse(event.data);
+      setLastMessage(message);
+
+      switch (message.type) {
+        case 'INITIAL_STAFF_STATUS':
+          setPersonnelStatuses(prev => {
+            const newStatuses = {};
+            message.payload.forEach(p => { newStatuses[p.id] = p; });
+            return newStatuses;
+          });
+          break;
+        case 'STAFF_STATUS_UPDATE':
+          setPersonnelStatuses(prev => ({ ...prev, [message.payload.id]: message.payload }));
+          break;
+        case 'INCOMING_TRANSFER':
+        case 'NEW_MESSAGE':
+          if (message.newNotification && userType === 'customer') fetchInitialData();
+          break;
+        case 'MESSAGE_SENT_CONFIRMATION':
+        case 'NEW_CHAT_MESSAGE': {
+          const newMessage = message.payload;
+          const chatPartnerId = newMessage.sender_id === auth.user.id ? newMessage.receiver_id : newMessage.sender_id;
+          setMessages(prev => ({
+            ...prev,
+            [chatPartnerId]: [...(prev[chatPartnerId] || []), newMessage],
+          }));
+          if (message.type === 'NEW_CHAT_MESSAGE') {
+            if (chatPartnerId !== activeChatIdRef.current) {
+              setUnreadMessages(prev => ({
+                ...prev,
+                [chatPartnerId]: (prev[chatPartnerId] || 0) + 1,
+              }));
+            } else {
+              chatService.markMessagesAsRead(chatPartnerId);
+            }
+          }
+          break;
+        }
+        case 'MESSAGES_READ': {
+          const { chatPartnerId } = message.payload;
+          setMessages(prev => {
+            const partnerMessages = prev[chatPartnerId] || [];
+            const updatedMessages = partnerMessages.map(msg =>
+              msg.sender_id === auth.user.id ? { ...msg, is_read: true } : msg
+            );
+            return { ...prev, [chatPartnerId]: updatedMessages };
+          });
+          break;
+        }
+        default:
+          break;
       }
     };
   }, [auth, userType, fetchInitialData]);
 
+  useEffect(() => {
+    connect();
+
+    return () => {
+      if (reconnectTimeoutRef.current) {
+        clearTimeout(reconnectTimeoutRef.current);
+      }
+      if (webSocketRef.current) {
+        webSocketRef.current.close(1000, 'Component unmounting');
+      }
+    };
+  }, [connect]);
+
+
   const loadChatHistory = useCallback(async (contactId) => {
     activeChatIdRef.current = contactId;
     try {
-        const { data } = await chatService.getChatHistory(contactId);
-        if(data.success) {
-            setMessages(prev => ({ ...prev, [contactId]: data.messages }));
-            if (data.messages.some(m => m.receiver_id === auth.user.id && !m.is_read)) {
-                await chatService.markMessagesAsRead(contactId);
-            }
-            setUnreadMessages(prev => {
-                const newUnread = {...prev};
-                delete newUnread[contactId];
-                return newUnread;
-            });
+      const { data } = await chatService.getChatHistory(contactId);
+      if (data.success) {
+        setMessages(prev => ({ ...prev, [contactId]: data.messages }));
+        if (data.messages.some(m => m.receiver_id === auth.user.id && !m.is_read)) {
+          await chatService.markMessagesAsRead(contactId);
         }
-    } catch(error) {
-        console.error("Sohbet geçmişi yüklenemedi", error);
+        setUnreadMessages(prev => {
+          const newUnread = { ...prev };
+          delete newUnread[contactId];
+          return newUnread;
+        });
+      }
+    } catch (error) {
+      console.error("Sohbet geçmişi yüklenemedi", error);
     }
   }, [auth?.user?.id]);
-  
+
   const sendMessage = useCallback((receiverId, content) => {
     if (webSocketRef.current && webSocketRef.current.readyState === WebSocket.OPEN) {
-        const payload = {
-            type: 'SEND_CHAT_MESSAGE',
-            payload: { receiverId, content }
-        };
-        webSocketRef.current.send(JSON.stringify(payload));
+      const payload = {
+        type: 'SEND_CHAT_MESSAGE',
+        payload: { receiverId, content }
+      };
+      webSocketRef.current.send(JSON.stringify(payload));
     }
   }, []);
+
+   const markAllAsRead = useCallback(async () => {
+    // Sadece okunmamış bildirim varsa API isteği yap
+    if (unreadCount > 0) {
+      try {
+        await notificationService.markAllAsRead();
+        // API isteği başarılı olduktan sonra state'i manuel olarak güncelle
+        // Bu, anında UI yansıması sağlar.
+        setNotifications(prev => 
+          prev.map(n => ({ ...n, is_read: true }))
+        );
+        setUnreadCount(0);
+      } catch (error) {
+        console.error("Failed to mark notifications as read:", error);
+      }
+    }
+  }, [unreadCount]); // unreadCount'a bağımlı
 
   const value = useMemo(() => ({
     connectionStatus,
@@ -180,9 +209,12 @@ export const WebSocketProvider = ({ children, auth, userType }) => {
     chatContacts,
     messages,
     unreadMessages,
+    lastMessage,
     loadChatHistory,
     sendMessage,
-  }), [connectionStatus, notifications, unreadCount, personnelStatuses, chatContacts, messages, unreadMessages, loadChatHistory, sendMessage]);
+    markAllAsRead,
+    fetchInitialData
+  }), [connectionStatus, notifications,markAllAsRead,fetchInitialData, unreadCount, personnelStatuses, chatContacts, messages, unreadMessages, lastMessage, loadChatHistory, sendMessage]);
 
   return <WebSocketContext.Provider value={value}>{children}</WebSocketContext.Provider>;
 };

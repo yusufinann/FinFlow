@@ -9,14 +9,12 @@ import {
   TableHead,
   TableRow,
   Paper,
-  Button,
   Chip,
   CircularProgress,
   Alert,
-  Container,
-  Stack
+  Container
 } from '@mui/material';
-import { Edit, PersonOff, Person } from '@mui/icons-material';
+import {PersonOff, Person } from '@mui/icons-material';
 import customerService from '../../../api/customerService';
 
 const HomePage = () => {
@@ -93,7 +91,6 @@ const HomePage = () => {
               <TableCell sx={{ fontWeight: 'bold' }}>E-posta</TableCell>
               <TableCell sx={{ fontWeight: 'bold' }}>Telefon</TableCell>
               <TableCell sx={{ fontWeight: 'bold' }}>Durum</TableCell>
-              <TableCell sx={{ fontWeight: 'bold' }} align="center">İşlemler</TableCell>
             </TableRow>
           </TableHead>
           <TableBody>
@@ -121,29 +118,6 @@ const HomePage = () => {
                     size="small"
                     icon={customer.is_active ? <Person /> : <PersonOff />}
                   />
-                </TableCell>
-                <TableCell align="center">
-                  <Stack direction="row" spacing={1} justifyContent="center">
-                    <Button
-                      variant="outlined"
-                      size="small"
-                      startIcon={<Edit />}
-                      onClick={() => handleEdit(customer)}
-                      sx={{ minWidth: 100 }}
-                    >
-                      Düzenle
-                    </Button>
-                    <Button
-                      variant={customer.is_active ? "outlined" : "contained"}
-                      size="small"
-                      color={customer.is_active ? "error" : "success"}
-                      startIcon={customer.is_active ? <PersonOff /> : <Person />}
-                      onClick={() => handleToggleStatus(customer.tckn, customer.is_active)}
-                      sx={{ minWidth: 100 }}
-                    >
-                      {customer.is_active ? 'Pasifleştir' : 'Aktifleştir'}
-                    </Button>
-                  </Stack>
                 </TableCell>
               </TableRow>
             ))}

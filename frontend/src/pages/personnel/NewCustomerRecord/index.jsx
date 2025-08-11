@@ -15,8 +15,11 @@ import {
   Select,
 } from '@mui/material';
 import customerService from '../../../api/customerService'; // Bu yolu kendi projenize göre doğrulayın
+import { usePersonnelAuth } from '../../../shared/context/PersonnelAuthContext';
 
 const NewCustomerPage = () => {
+  
+  const {personnel}=usePersonnelAuth();
   const initialFormData = {
     tckn: '',
     first_name: '',
@@ -30,22 +33,21 @@ const NewCustomerPage = () => {
     phone_number: '',
     email: '',
     address: '',
-    branch_code: '',
-    created_by_personnel_id: '1', // Oturumdan alınacak personel ID'si ile değiştirilmeli
+    branch_code: personnel.branch_code,
+    created_by_personnel_id: personnel.id, // Oturumdan alınacak personel ID'si ile değiştirilmeli
   };
 
   const [formData, setFormData] = useState(initialFormData);
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [error, setError] = useState(null);
   const [successMessage, setSuccessMessage] = useState('');
-
   const handleChange = (event) => {
     const { name, value } = event.target;
     setFormData((prevData) => ({
       ...prevData,
       [name]: value,
     }));
-  };
+  };console.log(personnel)
 
   const handleSubmit = async (event) => {
     event.preventDefault();
@@ -121,10 +123,10 @@ const NewCustomerPage = () => {
               <TextField name="nationality" label="Uyruk" value={formData.nationality} onChange={handleChange} fullWidth disabled={isSubmitting} />
             </Grid>
             <Grid item xs={12} sm={6}>
-                <TextField name="branch_code" label="Şube Kodu" type="number" value={formData.branch_code} onChange={handleChange} fullWidth disabled={isSubmitting}/>
+                <TextField name="branch_code" label="Şube Kodu" type="number" value={formData.branch_code} fullWidth disabled/>
             </Grid>
             <Grid item xs={12} sm={6}>
-                <TextField name="created_by_personnel_id" label="Kaydeden Personel ID" type="number" value={formData.created_by_personnel_id} onChange={handleChange} fullWidth disabled={isSubmitting}/>
+                <TextField name="created_by_personnel_id" label="Kaydeden Personel ID" type="number" value={formData.created_by_personnel_id}   disabled  fullWidth/>
             </Grid>
             <Grid item xs={12}>
               <TextField name="address" label="Adres" multiline rows={3} value={formData.address} onChange={handleChange} fullWidth disabled={isSubmitting} />

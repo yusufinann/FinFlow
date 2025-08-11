@@ -45,7 +45,7 @@ function PersonnelTransactionPage() {
 
             <Box component="form" onSubmit={handleSearchSubmit} sx={{ display: 'flex', gap: 2, mb: 4, alignItems: 'center' }}>
                 <TextField
-                    label="Müşteri TCKN veya Müşteri Numarası"
+                    label="T.C. Kimlik Numarası Giriniz"
                     variant="outlined"
                     value={searchQuery}
                     onChange={(e) => setSearchQuery(e.target.value)}

@@ -63,13 +63,38 @@ const getAllCustomers = async () => {
   }
 };
 
+const requestToggleStatusOTP = async (tckn) => {
+  try {
+    const response = await apiClient.post(`/customers/${tckn}/request-toggle-otp`);
+    return response.data;
+  } catch (error) {
+    if (error.response && error.response.data) {
+      throw error.response.data;
+    }
+    throw new Error('Durum değişikliği için OTP istenemedi.');
+  }
+};
+
+const confirmToggleStatus = async (tckn, otp) => {
+  try {
+    const response = await apiClient.post(`/customers/${tckn}/confirm-toggle`, { otp });
+    return response.data;
+  } catch (error) {
+    if (error.response && error.response.data) {
+      throw error.response.data;
+    }
+    throw new Error('Durum değişikliği onaylanamadı.');
+  }
+};
 
 const customerService = {
   createCustomer,
   getCustomerByTckn,
   updateCustomer,
   updateAccount,
-  getAllCustomers
+  getAllCustomers,
+  requestToggleStatusOTP,
+  confirmToggleStatus,
 };
 
 export default customerService;

@@ -15,6 +15,11 @@ export const useCustomerSearchPage = () => {
   const [editingAccountId, setEditingAccountId] = useState(null);
   const [isUpdatingAccount, setIsUpdatingAccount] = useState(false);
 
+  const [isOtpModalOpen, setOtpModalOpen] = useState(false);
+  const [otp, setOtp] = useState('');
+  const [isTogglingStatus, setIsTogglingStatus] = useState(false);
+
+
   const handleSearch = async () => {
     setIsLoading(true);
     setError(null);
@@ -101,28 +106,77 @@ export const useCustomerSearchPage = () => {
     }
   };
 
+  const handleToggleStatusClick = async () => {
+    if (!searchResult?.customer?.tckn) return;
+    
+    setIsTogglingStatus(true);
+    setUpdateAlert(null);
+    try {
+      const response = await customerService.requestToggleStatusOTP(searchResult.customer.tckn);
+      if (response.success) {
+        setUpdateAlert({ type: 'info', message: 'Onay kodu konsola gönderildi. (Simülasyon)' });
+        setOtpModalOpen(true);
+      } else {
+        setUpdateAlert({ type: 'error', message: response.message });
+      }
+    } catch (err) {
+      setUpdateAlert({ type: 'error', message: err.message || 'OTP istenirken bir hata oluştu.' });
+    } finally {
+      setIsTogglingStatus(false);
+    }
+  };
+
+  const handleConfirmToggleStatus = async () => {
+    if (!searchResult?.customer?.tckn || !otp) return;
+
+    setIsTogglingStatus(true);
+    setUpdateAlert(null);
+    try {
+      const response = await customerService.confirmToggleStatus(searchResult.customer.tckn, otp);
+      if (response.success) {
+        setSearchResult(prev => ({
+          ...prev,
+          customer: {
+            ...prev.customer,
+            is_active: response.data.is_active
+          }
+        }));
+        setUpdateAlert({ type: 'success', message: response.message });
+        setOtpModalOpen(false);
+        setOtp('');
+      } else {
+        setUpdateAlert({ type: 'error', message: response.message });
+      }
+    } catch (err) {
+      setUpdateAlert({ type: 'error', message: err.message || 'Durum değiştirilirken bir hata oluştu.' });
+    } finally {
+      setIsTogglingStatus(false);
+    }
+  };
+
   const disableActions = isEditing || editingAccountId !== null;
 
   return {
-    tckn,
-    setTckn,
+    tckn, setTckn,
     searchResult,
     isLoading,
-    error,
-    setError,
+    error, setError,
     isEditing,
     editableCustomer,
     isUpdating,
-    updateAlert,
-    setUpdateAlert,
-    editingAccountId,
-    setEditingAccountId,
+    updateAlert, setUpdateAlert,
+    editingAccountId, setEditingAccountId,
     isUpdatingAccount,
     disableActions,
+    isOtpModalOpen, setOtpModalOpen,
+    otp, setOtp,
+    isTogglingStatus,
     handleSearch,
     handleEditToggle,
     handleFieldChange,
     handleUpdate,
     handleUpdateAccount,
+    handleToggleStatusClick,
+    handleConfirmToggleStatus,
   };
 };

@@ -9,7 +9,6 @@ const API_BASE_PATH = '/accounts'; // Rota'nın temel yolu
 const getMyAccounts = async () => {
   try {
     const response = await apiClient.get(API_BASE_PATH);
-    console.log('Fetched accounts:', response.data);
     return response.data; 
     
 

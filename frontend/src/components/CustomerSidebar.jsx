@@ -10,7 +10,7 @@ import ReceiptLongIcon from '@mui/icons-material/ReceiptLong';
 import LogoutIcon from '@mui/icons-material/Logout';
 import SettingsIcon from '@mui/icons-material/Settings';
 import AccountBalanceIcon from '@mui/icons-material/AccountBalance';
-import CurrencyExchangeIcon from '@mui/icons-material/CurrencyExchange';
+import InsightsIcon from '@mui/icons-material/Insights';
 import NotificationsIcon from '@mui/icons-material/Notifications';
 import { useCustomerAuth } from '../shared/context/CustomerAuthContext';
 import { useWebSocket } from '../shared/context/websocketContext';
@@ -21,7 +21,7 @@ const ziraatRed = '#E30613';
 const pages = [
   { name: 'Hesap Özetim', path: '/customer/dashboard', icon: <AccountBalanceWalletIcon /> },
   { name: 'Para Transferi', path: '/customer/transfer', icon: <SwapHorizIcon /> },
-  { name: 'Döviz Kuru', path: '/customer/exchange', icon: <CurrencyExchangeIcon /> },
+{ name: 'Finansal Piyasalar', path: '/customer/exchange', icon: <InsightsIcon /> },
   { name: 'İşlem Geçmişi', path: '/customer/history', icon: <ReceiptLongIcon /> },
 ];
 

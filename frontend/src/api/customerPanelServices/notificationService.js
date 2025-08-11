@@ -13,7 +13,7 @@ const notificationService = {
 
   markAllAsRead: async () => {
     try {
-      const response = await api.post('/customers/notifications/mark-all-read');
+      const response = await api.post('/notifications/mark-all-read');
       return response.data;
     } catch (error) {
       console.error('Error marking notifications as read:', error.response?.data || error.message);

@@ -52,13 +52,23 @@ const setInitialPassword = async (username, otp, newPassword) => {
   }
 };
 
-
-
+const getPersonnelProfile = async () => {
+  try {
+    const response = await apiClient.get('/auth/personnel-details');
+    return response.data;
+  } catch (error) {
+    if (error.response && error.response.data) {
+      throw error.response.data;
+    }
+    throw new Error('Profil bilgileri alınırken bir hata oluştu.');
+  }
+};
 const authService = {
   login,
   logout,
   setInitialPassword,
   requestInitialPasswordOTP,
+  getPersonnelProfile
 };
 
 export default authService;
